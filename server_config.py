@@ -81,7 +81,7 @@ def dashboard():
     if 'user' not in session: return redirect(url_for('login'))
     user = session['user']
     user_data = USUARIOS[user]
-return render_template_string(f'''{ESTILOS}<div class="nav"><div style="font-weight:bold; color:var(--neon);">💸 QUICK MONEY</div><div><span class="user-badge">ID: {user}</span><span class="user-badge" style="color:var(--neon);">Créditos: {user_data['credits']}</span><a href="/logout" style="color:#ff4b4b; margin-left:15px; text-decoration:none;">Salir</a></div></div><div class="container">{f'<a href="/admin" style="display:block; border:1px solid var(--neon); color:var(--neon); padding:10px; text-align:center; text-decoration:none; margin-bottom:20px; border-radius:10px;">⚡ PANEL ADMIN ⚡</a>' if user_data['role'] == 'admin' else ''}<div class="card"><h3>Scanner de Algoritmos</h3><form method="POST" action="/process"><textarea name="lista" rows="10" placeholder="Pega tu lista aquí..."></textarea><button class="btn" style="margin-top:20px;">INICIAR VALIDACIÓN</button></form></div></div>''')
+    return render_template_string(f'''{ESTILOS}<div class="nav"><div style="font-weight:bold; color:var(--neon);">💸 QUICK MONEY</div><div><span class="user-badge">ID: {user}</span><span class="user-badge" style="color:var(--neon);">Créditos: {user_data['credits']}</span><a href="/logout" style="color:#ff4b4b; margin-left:15px; text-decoration:none;">Salir</a></div></div><div class="container">{f'<a href="/admin" style="display:block; border:1px solid var(--neon); color:var(--neon); padding:10px; text-align:center; text-decoration:none; margin-bottom:20px; border-radius:10px;">⚡ PANEL ADMIN ⚡</a>' if user_data['role'] == 'admin' else ''}<div class="card"><h3>Scanner de Algoritmos</h3><form method="POST" action="/process"><textarea name="lista" rows="10" placeholder="Pega tu lista aquí..."></textarea><button class="btn" style="margin-top:20px;">INICIAR VALIDACIÓN</button></form></div></div>''')
 
 @app.route('/admin')
 def admin():
@@ -105,3 +105,4 @@ def logout():
 
 if name == '__main__':
     app.run(host='0.0.0.0', port=80)
+
