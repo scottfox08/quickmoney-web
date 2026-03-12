@@ -8,8 +8,7 @@ app.secret_key = 'quickmoney_ultra_safe_2026' # Cambia esto por algo aleatorio
 # --- CONFIGURACIÓN DE ACCESO ---
 USUARIO_ADMIN = "mairo"
 CLAVE_ADMIN = "1234"
-NOMBRE_WEB = "Quickmoney-checker.com"
-
+NOMBRE_WEB = "💸 Quick Money 💸"
 # Crear carpeta de resultados si no existe
 if not os.path.exists('resultados'):
     os.makedirs('resultados')
@@ -55,6 +54,8 @@ def login():
     {ESTILOS}
     <div style="height:100vh; display:flex; align-items:center; justify-content:center;">
         <div class="container" style="width:400px; text-align:center;">
+           <p style="color:#00ff88; font-size:1.2rem; margin-bottom:5px;">(Bienvenido)</p>
+<h1>{NOMBRE_WEB}</h1>
             <h1>{NOMBRE_WEB}</h1>
             <form method="POST">
                 <input type="text" name="u" placeholder="Usuario" style="width:100%; padding:10px; margin:10px 0; background:#222; border:1px solid #444; color:white; border-radius:5px;"><br>
@@ -123,4 +124,5 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
+
     app.run(host='0.0.0.0', port=80)
