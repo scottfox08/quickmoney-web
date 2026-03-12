@@ -17,24 +17,19 @@ PROXIES = {
 }
 
 # --- BASE DE DATOS DE USUARIOS ---
-# Aquí se guardarán los usuarios que cree tu bot
 USUARIOS = {
     "mairo": {"pass": "1234", "credits": 10000, "role": "admin"},
 }
 
-# --- RUTA PARA QUE EL BOT DE TELEGRAM CREE USUARIOS ---
 @app.route('/api/add_user', methods=['POST'])
 def api_add_user():
-    # Esta clave debe ser la misma en tu bot y en la web
     auth_key = request.headers.get('X-Bot-Key')
     if auth_key != "QUICK_SECRET_99":
         return jsonify({"status": "error", "message": "No autorizado"}), 403
-    
     data = request.json
     u = data.get('username')
     p = data.get('password')
     c = data.get('credits', 50)
-    
     if u and p:
         USUARIOS[u] = {"pass": p, "credits": int(c), "role": "user"}
         return jsonify({"status": "success", "message": f"Usuario {u} creado"})
@@ -78,22 +73,26 @@ def login():
 
 @app.route('/dashboard')
 def dashboard():
-    if 'user' not in session: return redirect(url_for('login'))
+    if 'user' not in session:
+        return redirect(url_for('login'))
     user = session['user']
     user_data = USUARIOS[user]
-    return render_template_string(f'''{ESTILOS}<div class="nav"><div style="font-weight:bold; color:var(--neon);">💸 QUICK MONEY</div><div><span class="user-badge">ID: {user}</span><span class="user-badge" style="color:var(--neon);">Créditos: {user_data['credits']}</span><a href="/logout" style="color:#ff4b4b; margin-left:15px; text-decoration:none;">Salir</a></div></div><div class="container">{f'<a href="/admin" style="display:block; border:1px solid var(--neon); color:var(--neon); padding:10px; text-align:center; text-decoration:none; margin-bottom:20px; border-radius:10px;">⚡ PANEL ADMIN ⚡</a>' if user_data['role'] == 'admin' else ''}<div class="card"><h3>Scanner de Algoritmos</h3><form method="POST" action="/process"><textarea name="lista" rows="10" placeholder="Pega tu lista aquí..."></textarea><button class="btn" style="margin-top:20px;">INICIAR VALIDACIÓN</button></form></div></div>''')
+return render_template_string(f'''{ESTILOS}<div class="nav"><div style="font-weight:bold; color:var(--neon);">💸 QUICK MONEY</div><div><span class="user-badge">ID: {user}</span><span class="user-badge" style="color:var(--neon);">Créditos: {user_data['credits']}</span><a href="/logout" style="color:#ff4b4b; margin-left:15px; text-decoration:none;">Salir</a></div></div><div class="container">{f'<a href="/admin" style="display:block; border:1px solid var(--neon); color:var(--neon); padding:10px; text-align:center; text-decoration:none; margin-bottom:20px; border-radius:10px;">⚡ PANEL ADMIN ⚡</a>' if user_data['role'] == 'admin' else ''}<div class="card"><h3>Scanner de Algoritmos</h3><form method="POST" action="/process"><textarea name="lista" rows="10" placeholder="Pega tu lista aquí..."></textarea><button class="btn" style="margin-top:20px;">INICIAR VALIDACIÓN</button></form></div></div>''')
 
 @app.route('/admin')
 def admin():
-    if 'user' not in session or USUARIOS[session['user']]['role'] != 'admin': return "Acceso denegado"
-    return render_template_string(f'''{ESTILOS}<div class="container"><div class="card"><h2>Usuarios Registrados por el Bot</h2><table style="width:100%; text-align:left;"><tr><th>Usuario</th><th>Créditos</th><th>Rol</th></tr>{"".join([f"<tr><td>{u}</td><td style='color:var(--neon)'>{d['credits']}</td><td>{d['role']}</td></tr>" for u, d in USUARIOS.items()])}</table><br><a href="/dashboard" style="color:var(--neon);">← Volver</a></div></div>''')
+    if 'user' not in session or USUARIOS[session['user']]['role'] != 'admin':
+        return "Acceso denegado"
+    return render_template_string(f'''{ESTILOS}<div class="container"><div class="card"><h2>Usuarios</h2><table style="width:100%; text-align:left;"><tr><th>Usuario</th><th>Créditos</th><th>Rol</th></tr>{"".join([f"<tr><td>{u}</td><td style='color:var(--neon)'>{d['credits']}</td><td>{d['role']}</td></tr>" for u, d in USUARIOS.items()])}</table><br><a href="/dashboard" style="color:var(--neon);">← Volver</a></div></div>''')
 
 @app.route('/process', methods=['POST'])
 def process():
-    if 'user' not in session: return redirect(url_for('login'))
+    if 'user' not in session:
+        return redirect(url_for('login'))
     user = session['user']
-    lista = request.form.get('lista').splitlines()
-    if USUARIOS[user]['credits'] < len(lista): return "Créditos insuficientes."
+    lista = request.form.get('lista', '').splitlines()
+    if USUARIOS[user]['credits'] < len(lista):
+        return "Créditos insuficientes."
     USUARIOS[user]['credits'] -= len(lista)
     res = [f"<div style='border-bottom:1px solid #222; padding:10px;'>✅ LIVE: {cc} | <span style='color:#888;'>{get_bin_info(cc)}</span></div>" for cc in lista if len(cc.strip()) > 10]
     return render_template_string(f'''{ESTILOS}<div class="container"><div class="card"><h3>Resultados</h3><div style="background:#000; padding:15px; border-radius:8px; margin-bottom:20px;">{"".join(res)}</div><a href="/dashboard" class="btn" style="text-decoration:none; display:block; text-align:center;">NUEVO ESCANEO</a></div></div>''')
@@ -105,4 +104,3 @@ def logout():
 
 if name == '__main__':
     app.run(host='0.0.0.0', port=80)
-
