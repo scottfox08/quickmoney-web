@@ -2,9 +2,10 @@ from flask import Flask, render_template_string, request, redirect, url_for, ses
 import requests
 
 app = Flask(__name__)
-app.secret_key = 'quickmoney_elite_black_2026'
+app.secret_key = 'quickmoney_elite_final_2026'
 
-# --- LINK DE LA IMAGEN (Subida a la nube para carga rápida) ---
+# --- LINK DE LA IMAGEN DE FONDO (Subida a la nube para carga garantizada) ---
+# He subido tu imagen del ilusionista a un servidor externo para que cargue al instante.
 LOGO_LINK = "https://images2.imgbox.com/3d/0b/I2UfXp4y_o.png" 
 
 # --- CONFIGURACIÓN ---
@@ -23,18 +24,18 @@ def get_bin(cc):
     except: pass
     return "🌐 Info no disponible"
 
-# --- DISEÑO ELITE BLACK (Fusión de Imagen y Fondo Negro) ---
+# --- DISEÑO ELITE BLACK (Fusionando tu imagen con el fondo negro) ---
 CSS = f"""
 <style>
     :root {{ 
-        --silver: #c0c0c0; 
+        --silver: #e0e0e0; 
         --black: #000000; 
+        --accent: #ffffff; 
         --dark-gray: #1a1a1a;
-        --glow: rgba(255, 255, 255, 0.2);
     }}
     body {{ 
         background-color: var(--black); 
-        /* Imagen de fondo suave y fusionada con negro */
+        /* Imagen de fondo sutil y fusionada con negro */
         background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.95)), url('{LOGO_LINK}');
         background-repeat: no-repeat;
         background-position: center center;
@@ -53,9 +54,9 @@ CSS = f"""
         align-items: center; 
     }}
     .nav {{ 
-        background-color: rgba(10, 10, 10, 0.9); 
+        background-color: rgba(10, 10, 15, 0.95); 
         padding: 15px 30px; 
-        border-bottom: 2px solid var(--silver); 
+        border-bottom: 2px solid var(--accent); 
         display: flex; 
         justify-content: space-between; 
         align-items: center; 
@@ -66,15 +67,15 @@ CSS = f"""
         box-shadow: 0 5px 15px rgba(0,0,0,0.5);
     }}
     .card {{ 
-        background-color: rgba(20, 20, 20, 0.8); 
+        background-color: rgba(10, 10, 10, 0.9); 
         border: 1px solid var(--dark-gray); 
         border-radius: 15px; 
         padding: 40px; 
         width: 90%; 
         max-width: 450px; 
-        box-shadow: 0 0 30px rgba(0,0,0,0.7); 
+        box-shadow: 0 0 30px rgba(0,0,0,0.8); 
         border-top: 3px solid var(--silver); 
-        backdrop-filter: blur(5px); /* Efecto de cristal esmerilado */
+        backdrop-filter: blur(8px); /* Efecto de cristal esmerilado */
     }}
     .btn {{ 
         background: linear-gradient(135deg, #ffffff 0%, #a0a0a0 100%); 
@@ -96,7 +97,7 @@ CSS = f"""
     }}
     input, textarea {{ 
         width: 100%; 
-        background-color: rgba(0,0,0,0.6); 
+        background-color: rgba(0,0,0,0.85); 
         color: #ffffff; 
         border: 1px solid var(--dark-gray); 
         padding: 15px; 
@@ -108,7 +109,7 @@ CSS = f"""
     input:focus, textarea:focus {{
         border-color: var(--silver);
         outline: none;
-        box-shadow: 0 0 10px var(--glow);
+        box-shadow: 0 0 10px rgba(255,255,255,0.2);
     }}
     .live-row {{ 
         border-bottom: 1px solid var(--dark-gray); 
