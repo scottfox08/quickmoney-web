@@ -10,11 +10,15 @@ USUARIOS = {"mairo": {"pass": "1234", "credits": 10000, "role": "admin"}}
 
 def get_bin(cc):
     try:
-        r = requests.get(f"https://lookup.binlist.net/{cc[:6]}", proxies=PX, timeout=3)
+        # Probamos con un buscador más abierto
+        r = requests.get(f"https://data.handyapi.com/bin/{cc[:6]}", timeout=5)
         if r.status_code == 200:
             d = r.json()
-            return f"{d.get('country',{}).get('emoji','🌐')} {d.get('bank',{}).get('name','BCO')}"
-    except: pass
+            pais = d.get('Country', {}).get('Name', 'PAIS')
+            banco = d.get('Bank', 'BANCO')
+            return f"🌐 {pais} | {banco}"
+    except:
+        pass
     return "🌐 Info no disponible"
 
 @app.route('/api/add_user', methods=['POST'])
@@ -70,3 +74,4 @@ def logout():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80)
+
