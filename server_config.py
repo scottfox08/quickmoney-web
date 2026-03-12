@@ -10,13 +10,22 @@ USUARIOS = {"mairo": {"pass": "1234", "credits": 10000, "role": "admin"}}
 
 def get_bin(cc):
     try:
-        # Probamos con un buscador más abierto
-        r = requests.get(f"https://data.handyapi.com/bin/{cc[:6]}", timeout=5)
+        # Usamos una base de datos más completa y rápida
+        bin_6 = cc[:6]
+        r = requests.get(f"https://bin-ip-checker.p.rapidapi.com/?bin={bin_6}", 
+            headers={"X-RapidAPI-Key": "TU_KEY_OPCIONAL"}, timeout=5)
+        
+        # Como no tenemos Key de pago aún, usaremos este respaldo que es MUY bueno:
+        r = requests.get(f"https://lookup.binlist.net/{bin_6}", timeout=5)
+        
         if r.status_code == 200:
             d = r.json()
-            pais = d.get('Country', {}).get('Name', 'PAIS')
-            banco = d.get('Bank', 'BANCO')
-            return f"🌐 {pais} | {banco}"
+            banco = d.get('bank', {}).get('name', 'DESCONOCIDO')
+            pais = d.get('country', {}).get('name', 'S/N')
+            emoji = d.get('country', {}).get('emoji', '🌐')
+            tipo = d.get('type', '').upper() # DEBIT o CREDIT
+            
+            return f"{emoji} {pais} | {banco} | {tipo}"
     except:
         pass
     return "🌐 Info no disponible"
@@ -74,4 +83,5 @@ def logout():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80)
+
 
