@@ -1,8 +1,21 @@
 from flask import Flask, render_template_string, request, redirect, url_for, session, jsonify
 import requests
+import base64
+import os
 
 app = Flask(__name__)
-app.secret_key = 'quickmoney_2026'
+app.secret_key = 'quickmoney_elite_2026'
+
+# --- CARGA DEL LOGO (EL ILUSIONISTA) ---
+def get_logo():
+    try:
+        if os.path.exists("image.png"):
+            with open("image.png", "rb") as f:
+                return f"data:image/png;base64,{base64.b64encode(f.read()).decode()}"
+    except: pass
+    return ""
+
+LOGO_BG = get_logo()
 
 # --- CONFIGURACIÓN ---
 PX = {"http": "http://sp6jzqtaou:rUd7t65FxkK+x3F1hr@gate.decodo.com:10001", "https": "http://sp6jzqtaou:rUd7t65FxkK+x3F1hr@gate.decodo.com:10001"}
@@ -10,35 +23,34 @@ USUARIOS = {"mairo": {"pass": "1234", "credits": 10000, "role": "admin"}}
 
 def get_bin(cc):
     try:
-        # Usamos una base de datos más completa y rápida
-        bin_6 = cc[:6]
-        r = requests.get(f"https://bin-ip-checker.p.rapidapi.com/?bin={bin_6}", 
-            headers={"X-RapidAPI-Key": "TU_KEY_OPCIONAL"}, timeout=5)
-        
-        # Como no tenemos Key de pago aún, usaremos este respaldo que es MUY bueno:
-        r = requests.get(f"https://lookup.binlist.net/{bin_6}", timeout=5)
-        
+        r = requests.get(f"https://lookup.binlist.net/{cc[:6]}", proxies=PX, timeout=4)
         if r.status_code == 200:
             d = r.json()
-            banco = d.get('bank', {}).get('name', 'DESCONOCIDO')
-            pais = d.get('country', {}).get('name', 'S/N')
-            emoji = d.get('country', {}).get('emoji', '🌐')
-            tipo = d.get('type', '').upper() # DEBIT o CREDIT
-            
-            return f"{emoji} {pais} | {banco} | {tipo}"
-    except:
-        pass
+            b = d.get('bank', {}).get('name', 'BCO')
+            p = d.get('country', {}).get('name', 'S/N')
+            e = d.get('country', {}).get('emoji', '🌐')
+            return f"{e} {p} | {b}"
+    except: pass
     return "🌐 Info no disponible"
 
-@app.route('/api/add_user', methods=['POST'])
-def api_add_user():
-    if request.headers.get('X-Bot-Key') != "QUICK_SECRET_99": return jsonify({"status":"err"}), 403
-    data = request.json
-    u, p, c = data.get('username'), data.get('password'), data.get('credits', 50)
-    if u and p:
-        USUARIOS[u] = {"pass": p, "credits": int(c), "role": "user"}
-        return jsonify({"status":"ok"})
-    return jsonify({"status":"err"}), 400
+# --- DISEÑO ELITE (ESCAPE YOUR LIMITS) ---
+CSS = f"""
+<style>
+    :root {{ --silver: #e0e0e0; --black: #050505; --accent: #ffffff; }}
+    body {{ 
+        background: var(--black) url('{LOGO_BG}') no-repeat center center fixed; 
+        background-size: cover; color: var(--silver); font-family: 'Segoe UI', sans-serif; margin: 0; 
+    }}
+    .overlay {{ background: rgba(0,0,0,0.75); min-height: 100vh; width: 100%; display: flex; flex-direction: column; }}
+    .nav {{ background: rgba(10,10,15,0.9); padding: 20px; border-bottom: 1px solid var(--accent); display: flex; justify-content: space-between; align-items: center; box-shadow: 0 0 25px rgba(255,255,255,0.2); }}
+    .card {{ background: rgba(10,10,10,0.85); border: 1px solid #444; border-radius: 15px; padding: 30px; margin: 20px auto; max-width: 700px; box-shadow: 0 0 40px rgba(0,0,0,0.8); border-top: 2px solid var(--silver); backdrop-filter: blur(5px); }}
+    .btn {{ background: linear-gradient(135deg, #fff 0%, #a0a0a0 100%); color: #000; border: none; padding: 15px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }}
+    .btn:hover {{ transform: scale(1.02); box-shadow: 0 0 20px rgba(255,255,255,0.4); }}
+    input, textarea {{ width: 100%; background: rgba(0,0,0,0.8); color: #fff; border: 1px solid #555; padding: 12px; margin-bottom: 15px; border-radius: 8px; box-sizing: border-box; }}
+    .live-row {{ border-bottom: 1px solid #333; padding: 12px; font-family: 'Courier New', monospace; display: flex; justify-content: space-between; align-items: center; }}
+    .tag-live {{ color: #fff; text-shadow: 0 0 8px #fff; font-weight: bold; border: 1px solid #fff; padding: 2px 8px; border-radius: 4px; font-size: 12px; }}
+</style>
+"""
 
 @app.route('/')
 def index(): return redirect(url_for('login'))
@@ -50,31 +62,31 @@ def login():
         if u in USUARIOS and USUARIOS[u]['pass'] == p:
             session['user'] = u
             return redirect(url_for('dashboard'))
-    return render_template_string('<body style="background:#0a0a0a;color:white;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;"><div style="background:#151515;padding:30px;border-radius:10px;border:1px solid #00ff88;text-align:center;"><h2>QUICK MONEY</h2><form method="POST"><input name="u" placeholder="User" style="width:100%;margin-bottom:10px;padding:10px;"><input type="password" name="p" placeholder="Pass" style="width:100%;margin-bottom:20px;padding:10px;"><button style="width:100%;padding:10px;background:#00ff88;border:none;font-weight:bold;cursor:pointer;">ENTRAR</button></form></div></body>')
+    return render_template_string(f'<html><head><title>QUICK MONEY | LOGIN</title>{CSS}</head><body><div class="overlay" style="justify-content:center; align-items:center;"><div class="card" style="width:350px; text-align:center;"><h1 style="letter-spacing:5px; margin-bottom:30px; text-shadow: 0 0 10px white;">QUICK MONEY</h1><form method="POST"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASSWORD"><button class="btn">ACCEDER AL TRONO</button></form></div></div></body></html>')
 
 @app.route('/dashboard')
 def dashboard():
     if 'user' not in session: return redirect(url_for('login'))
     u = session['user']
-    creds = USUARIOS[u]['credits']
-    btn = f'<a href="/admin" style="color:#00ff88;display:block;margin-bottom:20px;">⚡ ADMIN PANEL</a>' if USUARIOS[u]['role'] == 'admin' else ''
-    return render_template_string(f'<body style="background:#0a0a0a;color:white;font-family:sans-serif;padding:20px;"><div style="max-width:600px;margin:auto;background:#151515;padding:20px;border-radius:10px;"><h3>💸 Terminal | {u} | Creds: {creds}</h3>{btn}<form method="POST" action="/process"><textarea name="lista" rows="10" style="width:100%;background:#000;color:#00ff88;padding:10px;" placeholder="CC|MM|YY|CVV"></textarea><button style="width:100%;padding:15px;background:#00ff88;margin-top:10px;font-weight:bold;cursor:pointer;">CHECKER START</button></form></div></body>')
-
-@app.route('/admin')
-def admin():
-    if 'user' not in session or USUARIOS[session['user']]['role'] != 'admin': return "No"
-    usrs = "".join([f"<li>{u}: {d['credits']}</li>" for u,d in USUARIOS.items()])
-    return render_template_string(f'<body style="background:#0a0a0a;color:white;padding:20px;"><h2>Usuarios</h2><ul>{usrs}</ul><a href="/dashboard" style="color:#00ff88;">Volver</a></body>')
+    return render_template_string(f'<html><head><title>QUICK MONEY | TERMINAL</title>{CSS}</head><body><div class="overlay"><div class="nav"><b>🦁 QUICK MONEY ELITE</b> <span>ID: {u} | Creds: {USUARIOS[u]["credits"]} | <a href="/logout" style="color:#ff4d4d; text-decoration:none; font-weight:bold;">SALIR</a></span></div><div class="card"><h3 style="text-align:center; letter-spacing:2px;">ESCAPE YOUR LIMITS</h3><form method="POST" action="/process"><textarea name="lista" rows="10" placeholder="FORMATO: CC|MM|YY|CVV"></textarea><button class="btn">INICIAR VALIDACIÓN</button></form></div></div></body></html>')
 
 @app.route('/process', methods=['POST'])
 def process():
     if 'user' not in session: return redirect(url_for('login'))
     u = session['user']
     lista = request.form.get('lista','').splitlines()
-    if USUARIOS[u]['credits'] < len(lista): return "Sin creditos"
+    if USUARIOS[u]['credits'] < len(lista): return "Saldo insuficiente"
     USUARIOS[u]['credits'] -= len(lista)
-    res = "".join([f"<p style='border-bottom:1px solid #333;padding:5px;'>✅ {cc} | {get_bin(cc)}</p>" for cc in lista if len(cc)>10])
-    return render_template_string(f'<body style="background:#0a0a0a;color:white;padding:20px;"><div style="background:#151515;padding:20px;border-radius:10px;"><h3>Resultados</h3>{res}<br><a href="/dashboard" style="color:#00ff88;">NUEVO CHECK</a></div></body>')
+    res = "".join([f"<div class='live-row'><span class='tag-live'>LIVE</span> <span>{cc}</span> <span>{get_bin(cc)}</span></div>" for cc in lista if len(cc)>10])
+    return render_template_string(f'<html><head>{CSS}</head><body><div class="overlay"><div class="nav"><b>RESULTADOS</b><a href="/dashboard" style="color:white; text-decoration:none;">← VOLVER</a></div><div class="card">{res if res else "No hay resultados"}<br><a href="/dashboard" class="btn" style="display:block; text-align:center; text-decoration:none; margin-top:20px;">NUEVA CONSULTA</a></div></div></body></html>')
+
+@app.route('/api/add_user', methods=['POST'])
+def api_add_user():
+    if request.headers.get('X-Bot-Key') != "QUICK_SECRET_99": return jsonify({"error":1}), 403
+    data = request.json
+    u, p, c = data.get('username'), data.get('password'), data.get('credits', 50)
+    USUARIOS[u] = {"pass": p, "credits": int(c), "role": "user"}
+    return jsonify({"status":"ok"})
 
 @app.route('/logout')
 def logout():
@@ -83,5 +95,3 @@ def logout():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=80)
-
-
