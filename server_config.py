@@ -7,7 +7,7 @@ app.secret_key = 'quickmoney_ultra_safe_2026'
 
 # --- CONFIGURACIÓN DE PROXIES (DECODO) ---
 PROXY_USER = "sp6jzqtaou"
-PROXY_PASS = "Ud7t65FxkK+x3Flhr" 
+PROXY_PASS = "rUd7t65FxkK+x3F1hr" 
 PROXY_HOST = "gate.decodo.com"
 PROXY_PORT = "10001"
 
@@ -16,41 +16,40 @@ PROXIES = {
     "https": f"http://{PROXY_USER}:{PROXY_PASS}@{PROXY_HOST}:{PROXY_PORT}"
 }
 
-# --- BASE DE DATOS DE USUARIOS ---
+# --- BASE DE DATOS DE USUARIOS (Simulada para el ejemplo) ---
+# Aquí es donde el bot de Telegram agregará los datos.
+# Formato: "usuario": {"pass": "123", "credits": 500, "role": "user"}
 USUARIOS = {
-    "mairo": ["1234", 5000],
-    "admin": ["admin2026", 100]
+    "mairo": {"pass": "1234", "credits": 10000, "role": "admin"},
+    "cliente1": {"pass": "bot552", "credits": 50, "role": "user"}
 }
 
-# --- FUNCIÓN BIN CHECKER (BANCO Y PAÍS) ---
 def get_bin_info(cc):
     bin_num = cc.strip()[:6]
     if not bin_num.isdigit(): return "❌ Formato Inválido"
     try:
-        # Consultamos una base de datos de BINS profesional
-        r = requests.get(f"https://lookup.binlist.net/{bin_num}", timeout=4)
+        # Usamos un servicio rápido de BINS
+        r = requests.get(f"https://lookup.binlist.net/{bin_num}", timeout=3)
         if r.status_code == 200:
             data = r.json()
             banco = data.get('bank', {}).get('name', 'BCO DESCONOCIDO')
             pais = data.get('country', {}).get('name', 'PAIS')
             emoji = data.get('country', {}).get('emoji', '🌐')
-            tipo = data.get('type', 'N/A').upper()
-            nivel = data.get('brand', 'N/A').upper()
-            return f"{emoji} {pais} | {banco} | {nivel} - {tipo}"
-    except:
-        pass
-    return "🌐 Info no disponible temporalmente"
+            return f"{emoji} {pais} | {banco}"
+    except: pass
+    return "🌐 Info no disponible"
 
 ESTILOS = '''
 <style>
-    :root { --neon-green: #00ff88; --dark-bg: #050505; }
-    body { background: var(--dark-bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; }
-    .card { background: #121212; border: 1px solid #333; border-radius: 15px; padding: 25px; margin: 20px auto; max-width: 800px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-    .btn { background: var(--neon-green); color: black; border: none; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; text-transform: uppercase; }
-    textarea { width: 100%; background: #000; color: var(--neon-green); border: 1px solid #333; border-radius: 10px; padding: 15px; box-sizing: border-box; font-family: monospace; }
-    .live-box { background: #000; border: 1px solid var(--neon-green); padding: 15px; border-radius: 10px; text-align: left; margin-top: 20px; font-size: 14px; }
-    .stat-bar { display: flex; justify-content: space-around; margin-bottom: 20px; }
-    .stat-item { background: #1a1a1a; padding: 10px 20px; border-radius: 8px; border: 1px solid #333; }
+    :root { --neon: #00ff88; --bg: #0a0a0a; --card: #151515; }
+    body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; }
+    .nav { background: var(--card); padding: 15px 5%; border-bottom: 1px solid #333; display: flex; justify-content: space-between; }
+    .container { padding: 40px 5%; max-width: 900px; margin: auto; }
+    .card { background: var(--card); border: 1px solid #222; border-radius: 12px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .btn { background: var(--neon); color: black; border: none; padding: 12px 25px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+    .btn:hover { box-shadow: 0 0 15px var(--neon); transform: translateY(-2px); }
+    textarea { width: 100%; background: #000; color: var(--neon); border: 1px solid #333; border-radius: 8px; padding: 15px; font-family: monospace; }
+    .user-badge { background: #222; padding: 5px 12px; border-radius: 20px; font-size: 13px; border: 1px solid #444; }
 </style>
 '''
 
@@ -58,60 +57,111 @@ ESTILOS = '''
 def login():
     if request.method == 'POST':
         u, p = request.form.get('u'), request.form.get('p')
-        if u in USUARIOS and USUARIOS[u][0] == p:
+        if u in USUARIOS and USUARIOS[u]['pass'] == p:
             session['user'] = u
             return redirect(url_for('dashboard'))
-    return render_template_string(f'{ESTILOS}<div style="height:100vh; display:flex; align-items:center;"><div class="card" style="width:300px;"><h2>💸 LOGIN</h2><form method="POST"><input name="u" placeholder="User" style="width:100%; padding:10px; margin:5px 0;"><input type="password" name="p" placeholder="Pass" style="width:100%; padding:10px; margin:5px 0;"><button class="btn">ACCEDER</button></form></div></div>')
+    return render_template_string(f'''
+    {ESTILOS}
+    <div style="height:100vh; display:flex; align-items:center; justify-content:center;">
+        <div class="card" style="width:350px; text-align:center;">
+            <h1 style="color:var(--neon); margin-bottom:5px;">QUICK MONEY</h1>
+            <p style="color:#666; font-size:14px; margin-bottom:25px;">Platform Management</p>
+            <form method="POST">
+                <input name="u" placeholder="Usuario asignado" style="width:100%; padding:12px; background:#000; border:1px solid #333; color:white; margin-bottom:10px; border-radius:5px;">
+                <input type="password" name="p" placeholder="Contraseña" style="width:100%; padding:12px; background:#000; border:1px solid #333; color:white; margin-bottom:20px; border-radius:5px;">
+                <button class="btn" style="width:100%;">ENTRAR AL SISTEMA</button>
+            </form>
+        </div>
+    </div>
+    ''')
 
 @app.route('/dashboard')
 def dashboard():
     if 'user' not in session: return redirect(url_for('login'))
+    user = session['user']
     return render_template_string(f'''
     {ESTILOS}
-    <div class="card">
-        <h2>💸 QUICK MONEY CHECKER 💸</h2>
-        <div class="stat-bar">
-            <div class="stat-item">User: <b>{session['user']}</b></div>
-            <div class="stat-item">Créditos: <b style="color:var(--neon-green)">{USUARIOS[session['user']][1]}</b></div>
+    <div class="nav">
+        <div style="font-weight:bold; color:var(--neon);">💸 QUICK MONEY</div>
+        <div>
+<span class="user-badge">ID: {user}</span>
+            <span class="user-badge" style="color:var(--neon);">Créditos: {USUARIOS[user]['credits']}</span>
+            <a href="/logout" style="color:#ff4b4b; text-decoration:none; margin-left:15px; font-size:14px;">Cerrar sesión</a>
         </div>
-        <form method="POST" action="/process">
-            <textarea name="lista" rows="10" placeholder="FORMATO: CC|MM|YY|CVV"></textarea>
-            <button class="btn" style="margin-top:15px;">🔍 INICIAR ESCANEO GLOBAL</button>
-        </form>
+    </div>
+    <div class="container">
+        {f'<div class="card" style="margin-bottom:20px; border-color:var(--neon);"><b>PANEL ADMIN:</b> <a href="/admin" style="color:var(--neon);">Gestionar Usuarios y Bot</a></div>' if USUARIOS[user]['role'] == 'admin' else ''}
+        <div class="card">
+            <h3>Terminal de Carga Profesional</h3>
+            <form method="POST" action="/process">
+                <textarea name="lista" rows="12" placeholder="4540123456789012|12|26|000"></textarea>
+                <div style="margin-top:20px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:#666; font-size:13px;">Costo: 1 crédito por línea</span>
+                    <button class="btn">INICIAR ESCANEO GLOBAL</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    ''')
+
+@app.route('/admin')
+def admin():
+    if 'user' not in session or USUARIOS[session['user']]['role'] != 'admin':
+        return "Acceso denegado"
+    # Aquí puedes ver todos los usuarios que han comprado
+    return render_template_string(f'''
+    {ESTILOS}
+    <div class="container">
+        <div class="card">
+            <h2>Gestión de Usuarios (Database)</h2>
+            <table style="width:100%; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid #333; text-align:left;">
+                    <th style="padding:10px;">Usuario</th>
+                    <th>Password</th>
+                    <th>Créditos</th>
+                    <th>Estado</th>
+                </tr>
+                {"".join([f"<tr style='border-bottom:1px solid #222;'><td style='padding:10px;'>{u}</td><td>{d['pass']}</td><td style='color:var(--neon)'>{d['credits']}</td><td>Activo</td></tr>" for u, d in USUARIOS.items()])}
+            </table>
+            <br><a href="/dashboard" style="color:var(--neon); text-decoration:none;">← Volver al Dashboard</a>
+        </div>
     </div>
     ''')
 
 @app.route('/process', methods=['POST'])
 def process():
     if 'user' not in session: return redirect(url_for('login'))
-lista = request.form.get('lista').splitlines()
     user = session['user']
+    lista = request.form.get('lista').splitlines()
     
-    if USUARIOS[user][1] < len(lista):
-        return "⚠️ No tienes suficientes créditos para esta lista."
+    if USUARIOS[user]['credits'] < len(lista):
+        return "⚠️ Créditos insuficientes. Contacta al bot para recargar."
 
-    USUARIOS[user][1] -= len(lista)
+    USUARIOS[user]['credits'] -= len(lista)
     resultados = []
-
     for cc in lista:
         if len(cc.strip()) > 10:
-            # Aquí llamamos a la función que identifica el banco y país
             info = get_bin_info(cc)
-            resultados.append(f"✅ LIVE: {cc} | {info}")
-            # Pequeña pausa para no saturar la API de BINS
-            time.sleep(0.5)
-
+            resultados.append(f"<div style='border-bottom:1px solid #222; padding:8px;'>✅ LIVE: {cc} | <span style='color:#888;'>{info}</span></div>")
+    
     return render_template_string(f'''
     {ESTILOS}
-    <div class="card">
-        <h3>Resultados del Procesamiento</h3>
-        <p>Créditos restantes: {USUARIOS[user][1]}</p>
-        <div class="live-box">
-            {"<br>".join(resultados) if resultados else "No se encontraron tarjetas válidas."}
+    <div class="container">
+        <div class="card">
+            <h3>Resultados</h3>
+            <div style="background:#000; border-radius:8px; padding:15px; font-family:monospace;">
+                {"".join(resultados)}
+            </div>
+            <p>Saldo restante: {USUARIOS[user]['credits']} créditos</p>
+            <a href="/dashboard" class="btn" style="display:inline-block; text-decoration:none; text-align:center;">NUEVO ESCANEO</a>
         </div>
-        <br><a href="/dashboard" style="color:var(--neon-green); text-decoration:none;">← VOLVER AL PANEL</a>
     </div>
     ''')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
 
 if name == '__main__':
     app.run(host='0.0.0.0', port=80)
