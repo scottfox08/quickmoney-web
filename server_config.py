@@ -6,14 +6,16 @@ import os
 app = Flask(__name__)
 app.secret_key = 'quickmoney_elite_2026'
 
-# --- CARGA DEL LOGO (EL ILUSIONISTA) ---
+# --- CARGA DEL LOGO (MODO SEGURO) ---
 def get_logo():
     try:
+        # Buscamos el archivo. Si existe, lo cargamos.
         if os.path.exists("image.png"):
             with open("image.png", "rb") as f:
                 return f"data:image/png;base64,{base64.b64encode(f.read()).decode()}"
-    except: pass
-    return ""
+    except Exception as e:
+        print(f"Error cargando imagen: {e}")
+    return "" # Si falla, devuelve vacío y la web carga en negro
 
 LOGO_BG = get_logo()
 
@@ -33,22 +35,26 @@ def get_bin(cc):
     except: pass
     return "🌐 Info no disponible"
 
-# --- DISEÑO ELITE (ESCAPE YOUR LIMITS) ---
+# --- DISEÑO ---
 CSS = f"""
 <style>
     :root {{ --silver: #e0e0e0; --black: #050505; --accent: #ffffff; }}
     body {{ 
-        background: var(--black) url('{LOGO_BG}') no-repeat center center fixed; 
-        background-size: cover; color: var(--silver); font-family: 'Segoe UI', sans-serif; margin: 0; 
+        background-color: var(--black);
+        background-image: url('{LOGO_BG}');
+        background-repeat: no-repeat;
+        background-position: center center;
+        background-attachment: fixed;
+        background-size: cover; 
+        color: var(--silver); 
+        font-family: 'Segoe UI', sans-serif; 
+        margin: 0; 
     }}
     .overlay {{ background: rgba(0,0,0,0.75); min-height: 100vh; width: 100%; display: flex; flex-direction: column; }}
-    .nav {{ background: rgba(10,10,15,0.9); padding: 20px; border-bottom: 1px solid var(--accent); display: flex; justify-content: space-between; align-items: center; box-shadow: 0 0 25px rgba(255,255,255,0.2); }}
-    .card {{ background: rgba(10,10,10,0.85); border: 1px solid #444; border-radius: 15px; padding: 30px; margin: 20px auto; max-width: 700px; box-shadow: 0 0 40px rgba(0,0,0,0.8); border-top: 2px solid var(--silver); backdrop-filter: blur(5px); }}
-    .btn {{ background: linear-gradient(135deg, #fff 0%, #a0a0a0 100%); color: #000; border: none; padding: 15px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }}
-    .btn:hover {{ transform: scale(1.02); box-shadow: 0 0 20px rgba(255,255,255,0.4); }}
+    .nav {{ background: rgba(10,10,15,0.9); padding: 20px; border-bottom: 1px solid var(--accent); display: flex; justify-content: space-between; align-items: center; }}
+    .card {{ background: rgba(10,10,10,0.85); border: 1px solid #444; border-radius: 15px; padding: 30px; margin: 20px auto; max-width: 700px; border-top: 2px solid var(--silver); backdrop-filter: blur(5px); }}
+    .btn {{ background: linear-gradient(135deg, #fff 0%, #a0a0a0 100%); color: #000; border: none; padding: 15px; border-radius: 8px; font-weight: bold; width: 100%; cursor: pointer; text-transform: uppercase; }}
     input, textarea {{ width: 100%; background: rgba(0,0,0,0.8); color: #fff; border: 1px solid #555; padding: 12px; margin-bottom: 15px; border-radius: 8px; box-sizing: border-box; }}
-    .live-row {{ border-bottom: 1px solid #333; padding: 12px; font-family: 'Courier New', monospace; display: flex; justify-content: space-between; align-items: center; }}
-    .tag-live {{ color: #fff; text-shadow: 0 0 8px #fff; font-weight: bold; border: 1px solid #fff; padding: 2px 8px; border-radius: 4px; font-size: 12px; }}
 </style>
 """
 
@@ -62,13 +68,13 @@ def login():
         if u in USUARIOS and USUARIOS[u]['pass'] == p:
             session['user'] = u
             return redirect(url_for('dashboard'))
-    return render_template_string(f'<html><head><title>QUICK MONEY | LOGIN</title>{CSS}</head><body><div class="overlay" style="justify-content:center; align-items:center;"><div class="card" style="width:350px; text-align:center;"><h1 style="letter-spacing:5px; margin-bottom:30px; text-shadow: 0 0 10px white;">QUICK MONEY</h1><form method="POST"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASSWORD"><button class="btn">ACCEDER AL TRONO</button></form></div></div></body></html>')
+    return render_template_string(f'<html><head><title>QUICK MONEY</title>{CSS}</head><body><div class="overlay" style="justify-content:center; align-items:center;"><div class="card" style="width:350px; text-align:center;"><h1 style="text-shadow: 0 0 10px white;">QUICK MONEY</h1><form method="POST"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASSWORD"><button class="btn">ACCEDER AL TRONO</button></form></div></div></body></html>')
 
 @app.route('/dashboard')
 def dashboard():
     if 'user' not in session: return redirect(url_for('login'))
     u = session['user']
-    return render_template_string(f'<html><head><title>QUICK MONEY | TERMINAL</title>{CSS}</head><body><div class="overlay"><div class="nav"><b>🦁 QUICK MONEY ELITE</b> <span>ID: {u} | Creds: {USUARIOS[u]["credits"]} | <a href="/logout" style="color:#ff4d4d; text-decoration:none; font-weight:bold;">SALIR</a></span></div><div class="card"><h3 style="text-align:center; letter-spacing:2px;">ESCAPE YOUR LIMITS</h3><form method="POST" action="/process"><textarea name="lista" rows="10" placeholder="FORMATO: CC|MM|YY|CVV"></textarea><button class="btn">INICIAR VALIDACIÓN</button></form></div></div></body></html>')
+    return render_template_string(f'<html><head><title>TERMINAL</title>{CSS}</head><body><div class="overlay"><div class="nav"><b>🦁 QUICK MONEY ELITE</b> <span>ID: {u} | Creds: {USUARIOS[u]["credits"]} | <a href="/logout" style="color:#ff4d4d; text-decoration:none;">SALIR</a></span></div><div class="card"><h3 style="text-align:center;">ESCAPE YOUR LIMITS</h3><form method="POST" action="/process"><textarea name="lista" rows="10" placeholder="CC|MM|YY|CVV"></textarea><button class="btn">INICIAR VALIDACIÓN</button></form></div></div></body></html>')
 
 @app.route('/process', methods=['POST'])
 def process():
@@ -77,7 +83,7 @@ def process():
     lista = request.form.get('lista','').splitlines()
     if USUARIOS[u]['credits'] < len(lista): return "Saldo insuficiente"
     USUARIOS[u]['credits'] -= len(lista)
-    res = "".join([f"<div class='live-row'><span class='tag-live'>LIVE</span> <span>{cc}</span> <span>{get_bin(cc)}</span></div>" for cc in lista if len(cc)>10])
+    res = "".join([f"<div style='border-bottom:1px solid #333; padding:10px;'>✅ LIVE: {cc} | {get_bin(cc)}</div>" for cc in lista if len(cc)>10])
     return render_template_string(f'<html><head>{CSS}</head><body><div class="overlay"><div class="nav"><b>RESULTADOS</b><a href="/dashboard" style="color:white; text-decoration:none;">← VOLVER</a></div><div class="card">{res if res else "No hay resultados"}<br><a href="/dashboard" class="btn" style="display:block; text-align:center; text-decoration:none; margin-top:20px;">NUEVA CONSULTA</a></div></div></body></html>')
 
 @app.route('/api/add_user', methods=['POST'])
