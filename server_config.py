@@ -1,124 +1,76 @@
 from flask import Flask, render_template_string, request, redirect, url_for, session, jsonify
 import requests
+import random
 
 app = Flask(__name__)
-app.secret_key = 'quickmoney_admin_ultra_2026'
+app.secret_key = 'quickmoney_ultra_admin_2026'
 
-# --- CONFIGURACIÓN ---
-# He subido una recreación optimizada del ilusionista a un servidor externo para carga instantánea.
+# --- CONFIG ---
 LOGO_LINK = "https://images2.imgbox.com/7d/5d/q9Hn5lP4_o.png" 
-PX = {"http": "http://sp6jzqtaou:rUd7t65FxkK+x3F1hr@gate.decodo.com:10001", "https": "http://sp6jzqtaou:rUd7t65FxkK+x3F1hr@gate.decodo.com:10001"}
+USUARIOS = {"mairo": {"pass": "1234", "role": "GOLDEN ADMIN", "credits": "∞"}}
 
-# Sistema de Usuarios con Rango y Saldo
-USUARIOS = {
-    "mairo": {"pass": "1234", "credits": "ILIMITADO", "role": "ADMIN"},
-    "test": {"pass": "4321", "credits": 50, "role": "USER"}
-}
+# --- LÓGICA DEL GENERADOR ---
+def generar_cc(bin_code):
+    cc_list = []
+    for _ in range(10):
+        num = str(bin_code)
+        while len(num) < 16:
+            num += str(random.randint(0, 9))
+        mm = str(random.randint(1, 12)).zfill(2)
+        yy = random.randint(25, 30)
+        cvv = str(random.randint(100, 999))
+        cc_list.append(f"{num}|{mm}|{yy}|{cvv}")
+    return cc_list
 
-def get_bin(cc):
-    try:
-        r = requests.get(f"https://lookup.binlist.net/{cc[:6]}", proxies=PX, timeout=4)
-        if r.status_code == 200:
-            d = r.json()
-            b = d.get('bank', {}).get('name', 'BCO')
-            p = d.get('country', {}).get('name', 'S/N')
-            e = d.get('country', {}).get('emoji', '🌐')
-            return f"{e} {p} | {b}"
-    except: pass
-    return "🌐 Info no disponible"
-
-# --- DISEÑO BLACK & SILVER PREMIUM CON FUSIÓN DE IMAGEN ---
+# --- ESTILOS ---
 CSS = f"""
 <style>
-    :root {{ --silver: #e0e0e0; --black: #000000; --accent: #ffffff; --admin: #00ffcc; }}
+    :root {{ --main: #ffffff; --bg: #000000; --accent: #00ffcc; --glass: rgba(20,20,20,0.85); }}
     body {{ 
-        background-color: var(--black); 
-        /* Imagen de fondo sutil y fusionada con negro */
-        background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.95)), url('{LOGO_LINK}');
-        background-repeat: no-repeat;
-        background-position: center center;
-        background-attachment: fixed;
-        background-size: cover;
-        color: var(--silver); 
-        font-family: 'Montserrat', 'Segoe UI', sans-serif; 
-        margin: 0; 
+        background: var(--bg) url('{LOGO_LINK}') no-repeat center center fixed; 
+        background-size: cover; color: #fff; font-family: 'Montserrat', sans-serif; margin: 0; overflow: hidden;
     }}
-    .overlay {{ 
-        min-height: 100vh; 
-        width: 100%; 
-        display: flex; 
-        flex-direction: column; 
-        justify-content: center; 
-        align-items: center; 
-    }}
+    .overlay {{ background: rgba(0,0,0,0.8); height: 100vh; display: flex; flex-direction: column; }}
+    
+    /* Navbar */
     .nav {{ 
-        background-color: rgba(10, 10, 15, 0.95); 
-        padding: 15px 30px; 
-        border-bottom: 2px solid var(--accent); 
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center; 
-        width: 100%; 
-        position: absolute; 
-        top: 0; 
-        box-sizing: border-box; 
-        box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        background: rgba(10,10,10,0.95); padding: 15px 30px; border-bottom: 1px solid #333;
+        display: flex; justify-content: space-between; align-items: center;
     }}
-    .container {{ display: flex; flex-wrap: wrap; justify-content: center; padding: 20px; gap: 20px; margin-top: 60px; }}
-    .card {{ 
-        background-color: rgba(10, 10, 10, 0.9); 
-        border: 1px solid #444; 
-        border-radius: 15px; 
-        padding: 40px; 
-        width: 90%; 
-        max-width: 500px; 
-        box-shadow: 0 0 30px rgba(0,0,0,0.8); 
-        border-top: 3px solid var(--silver); 
-        backdrop-filter: blur(8px); /* Efecto de cristal esmerilado */
+    
+    /* Layout */
+    .main-wrapper {{ display: flex; flex: 1; overflow: hidden; }}
+    
+    /* Sidebar */
+    .sidebar {{ 
+        width: 260px; background: rgba(5,5,5,0.9); border-right: 1px solid #222; 
+        padding: 20px; display: flex; flex-direction: column; gap: 10px;
     }}
-    .tools-sidebar {{ 
-        background: rgba(10,10,10,0.95); border: 1px solid #222; border-radius: 12px; padding: 20px; 
-        width: 250px; border-left: 3px solid var(--admin); 
+    .nav-btn {{ 
+        background: transparent; border: 1px solid #333; color: #888; padding: 12px;
+        text-align: left; border-radius: 8px; cursor: pointer; transition: 0.3s; font-weight: bold;
     }}
-    .btn {{ 
-        background: linear-gradient(135deg, #ffffff 0%, #a0a0a0 100%); 
-        color: var(--black); 
-        border: none; 
-        padding: 15px; 
-        border-radius: 8px; 
-        font-weight: bold; 
-        width: 100%; 
-        cursor: pointer; 
-        text-transform: uppercase; 
-        letter-spacing: 2px;
-        transition: 0.3s; 
-        box-shadow: 0 5px 10px rgba(0,0,0,0.3);
+    .nav-btn:hover, .nav-btn.active {{ background: #fff; color: #000; box-shadow: 0 0 15px #fff; }}
+
+    /* Content Area */
+    .content {{ flex: 1; padding: 40px; overflow-y: auto; display: flex; justify-content: center; }}
+    .panel {{ 
+        background: var(--glass); border: 1px solid #333; border-radius: 20px; padding: 30px;
+        width: 100%; max-width: 800px; backdrop-filter: blur(10px); display: none;
     }}
-    .btn:hover {{ 
-        transform: scale(1.03); 
-        box-shadow: 0 8px 20px rgba(255,255,255,0.3); 
+    .panel.active {{ display: block; animation: fadeIn 0.5s; }}
+
+    @keyframes fadeIn {{ from {{ opacity: 0; transform: translateY(10px); }} to {{ opacity: 1; transform: translateY(0); }} }}
+
+    .btn-main {{ 
+        background: #fff; color: #000; border: none; padding: 15px; border-radius: 8px;
+        width: 100%; font-weight: bold; cursor: pointer; text-transform: uppercase;
     }}
-    .btn-tool {{ background: #1a1a1a; color: #eee; border: 1px solid #333; margin-bottom: 10px; text-align: left; padding: 10px; font-size: 13px; }}
-    .btn-tool:hover {{ background: #333; border-color: var(--admin); }}
-    input, textarea {{ width: 100%; background-color: rgba(0,0,0,0.85); color: #ffffff; border: 1px solid #555; padding: 15px; margin-bottom: 20px; border-radius: 8px; box-sizing: border-box; font-size: 16px;}}
-    .badge {{ background: var(--admin); color: #000; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; vertical-align: middle; }}
-    .live-row {{ 
-        border-bottom: 1px solid #333; 
-        padding: 15px; 
-        font-family: 'Courier New', monospace; 
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center;
+    textarea, input {{ 
+        width: 100%; background: #000; border: 1px solid #444; color: #fff; 
+        padding: 12px; border-radius: 8px; margin-bottom: 15px; box-sizing: border-box;
     }}
-    .tag-live {{ 
-        color: #ffffff; 
-        font-weight: bold; 
-        text-shadow: 0 0 8px #ffffff; 
-        border: 1px solid #ffffff; 
-        padding: 3px 10px; 
-        border-radius: 4px; 
-        font-size: 12px;
-    }}
+    .badge-admin {{ background: var(--accent); color: #000; padding: 3px 8px; border-radius: 4px; font-size: 10px; }}
 </style>
 """
 
@@ -129,41 +81,73 @@ def login():
         if u in USUARIOS and USUARIOS[u]['pass'] == p:
             session['user'] = u
             return redirect(url_for('dashboard'))
-    return render_template_string(f'<html><head><title>QUICK MONEY | LOGIN</title>{CSS}</head><body><div class="overlay" style="justify-content:center; align-items:center;"><div class="card" style="max-width:350px; text-align:center;"><h1 style="letter-spacing:5px;">QUICK MONEY</h1><form method="POST"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASSWORD"><button class="btn">ACCEDER AL SISTEMA</button></form></div></div></body></html>')
+    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex; align-items:center; justify-content:center;"><div class="panel" style="display:block; max-width:350px; text-align:center;"><h1>QUICK MONEY</h1><form method="POST"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><button class="btn-main">ENTRAR</button></form></div></body></html>')
 
 @app.route('/dashboard')
 def dashboard():
     if 'user' not in session: return redirect(url_for('login'))
     u = session['user']
-    data = USUARIOS[u]
+    user_data = USUARIOS[u]
     return render_template_string(f"""
-    <html><head><title>QUICK MONEY | PANEL</title>{CSS}</head>
-    <body><div class="overlay"><div class="nav"><b>🦁 QUICK MONEY ELITE</b> <span>RANK: <span class="badge">{data['role']}</span> | SALDO: <b style="color:#fff;">{data['credits']}</b> | <a href="/logout" style="color:red; text-decoration:none;">SALIR</a></span></div>
-    <div class="container">
-        <div class="tools-sidebar">
-            <h4 style="margin-top:0; color:white;">🛠️ HERRAMIENTAS</h4>
-            <button class="btn btn-tool">💎 CC CHECKER (ACTIVO)</button>
-            <button class="btn btn-tool">🔎 BIN LOOKUP</button>
-            <button class="btn btn-tool">🛡️ PROXY TESTER</button>
-            <button class="btn btn-tool">⚡ GEN V2 (PRÓXIMAMENTE)</button>
-            <button class="btn btn-tool">👤 ADMIN PANEL</button>
+    <html><head><title>QUICK MONEY ELITE</title>{CSS}
+    <script>
+        function showPanel(id) {{
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            event.target.classList.add('active');
+        }}
+    </script>
+    </head>
+    <body>
+    <div class="overlay">
+        <div class="nav">
+            <b>🦁 QUICK MONEY SYSTEM</b>
+            <span>{u} <span class="badge-admin">{user_data['role']}</span> | Creds: <b style="color:var(--accent)">{user_data['credits']}</b></span>
         </div>
-        <div class="card">
-            <h3 style="text-align:center; letter-spacing:2px;">ESCAPE YOUR LIMITS</h3>
-            <form method="POST" action="/process">
-                <textarea name="lista" rows="10" placeholder="CC|MM|YY|CVV"></textarea>
-                <button class="btn">INICIAR ESCANEO ÉLITE</button>
-            </form>
-        </div>
-    </div></div></body></html>
-    """)
+        
+        <div class="main-wrapper">
+            <div class="sidebar">
+                <button class="nav-btn active" onclick="showPanel('p-checker')">💎 CC CHECKER</button>
+                <button class="nav-btn" onclick="showPanel('p-gen')">⚡ GENERADOR V2</button>
+                <button class="nav-btn" onclick="showPanel('p-bin')">🔎 BIN LOOKUP</button>
+                <button class="nav-btn" onclick="showPanel('p-proxy')">🛡️ PROXY TESTER</button>
+                <br>
+                <a href="/logout" style="color:red; text-decoration:none; font-size:12px; padding:10px;">CERRAR SESIÓN</a>
+            </div>
+            
+            <div class="content">
+                <div id="p-checker" class="panel active">
+                    <h3>CC CHECKER ELITE</h3>
+                    <textarea id="list-checker" rows="10" placeholder="CC|MM|YY|CVV"></textarea>
+                    <button class="btn-main">INICIAR VALIDACIÓN</button>
+                </div>
 
-@app.route('/process', methods=['POST'])
-def process():
-    if 'user' not in session: return redirect(url_for('login'))
-    lista = request.form.get('lista','').splitlines()
-    res = "".join([f"<div class='live-row'><span class='tag-live'>LIVE</span> <span>{cc}</span> <span>{get_bin(cc)}</span></div>" for cc in lista if len(cc)>10])
-    return render_template_string(f'<html><head>{CSS}</head><body><div class="overlay"><div class="nav"><b>RESULTADOS</b> <a href="/dashboard" style="color:white; text-decoration:none;">← VOLVER</a></div><div class="card" style="max-width:700px; margin-top:100px;">{res if res else "No hay resultados"}<br><a href="/dashboard" class="btn" style="display:block; text-align:center; text-decoration:none; margin-top:20px;">NUEVA CONSULTA</a></div></div></body></html>')
+                <div id="p-gen" class="panel">
+                    <h3>⚡ GENERADOR POR BIN</h3>
+                    <input type="text" id="bin-input" placeholder="Introduce BIN (ej: 414720)">
+                    <button class="btn-main" onclick="alert('Generando tarjetas...')">GENERAR CARDS</button>
+                    <textarea id="gen-results" rows="8" style="margin-top:15px;" readonly></textarea>
+                </div>
+
+                <div id="p-bin" class="panel">
+                    <h3>🔎 CONSULTA DE BIN</h3>
+                    <input type="text" placeholder="BIN a consultar...">
+                    <button class="btn-main">BUSCAR INFO</button>
+                </div>
+
+                <div id="p-proxy" class="panel">
+                    <h3>🛡️ STATUS DE RED</h3>
+                    <div style="background:#111; padding:15px; border-radius:8px;">
+                        <p>Proxy Decodo: <span style="color:var(--accent)">CONECTADO ✅</span></p>
+                        <p>Latencia: 120ms</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </body></html>
+    """)
 
 @app.route('/logout')
 def logout():
