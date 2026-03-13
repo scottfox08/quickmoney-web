@@ -2,7 +2,7 @@ import os, random, time, json
 from flask import Flask, render_template_string, request, redirect, session, url_for, jsonify
 
 app = Flask(__name__)
-app.secret_key = 'quick_money_v29_final_solution'
+app.secret_key = 'quick_money_v30_1_storm_final'
 
 # --- BASE DE DATOS LOCAL ---
 DB_FILE = 'database.json'
@@ -16,17 +16,17 @@ def save_db(data):
 
 COSTO_LIVE = 0.15
 
-# --- MOTOR DE INTELIGENCIA DE BINS GLOBAL ---
+# --- MOTOR DE INTELIGENCIA DE BINS GLOBAL (V30.1) ---
 def get_full_bin_info(cc):
     b = cc[:6]
+    # USA
     if b.startswith(('414740', '4737', '4013', '4226', '4365', '4852', '4120')):
         return "JPMORGAN CHASE BANK N.A. | UNITED STATES 🇺🇸"
     elif b.startswith(('4802', '4400', '4444', '4000', '4026', '4147', '4266')):
         return "BANK OF AMERICA N.A. | UNITED STATES 🇺🇸"
     elif b.startswith(('5312', '5434', '4343', '4615', '5166', '4736')):
         return "WELLS FARGO BANK N.A. | UNITED STATES 🇺🇸"
-    elif b.startswith(('5178', '5456', '5491', '4003', '5528')):
-        return "CAPITAL ONE BANK | UNITED STATES 🇺🇸"
+    # DOM
     elif b.startswith(('4539', '4342', '4031', '4052')):
         return "BANRESERVAS | DOMINICAN REPUBLIC 🇩🇴"
     elif b.startswith(('4152', '4015', '4214', '5498')):
@@ -46,7 +46,7 @@ CSS = """
     .auth-card { background: var(--card); border: 1px solid var(--border); padding: 35px; width: 340px; text-align: center; border-top: 3px solid var(--gold); border-radius: 4px; }
     .houdini-frame { width: 110px; height: 110px; border-radius: 50%; border: 2px solid var(--gold); margin: 0 auto 25px; background: url('https://i.postimg.cc/85zXp9XN/houdini-logo.png') center/cover; box-shadow: 0 0 25px rgba(197, 160, 89, 0.4); }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 20px; margin-bottom: 15px; backdrop-filter: blur(5px); }
-    .card-h { font-size: 11px; color: var(--gold); text-transform: uppercase; font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; display: block; }
+    .card-h { font-size: 11px; color: var(--gold); text-transform: uppercase; font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; display: block; letter-spacing: 1.5px; }
     .live-item { border-bottom: 1px solid #111; padding: 10px 0; margin-bottom: 5px; }
     .live-cc { font-size: 14px; font-weight: 700; color: #fff; display: block; }
     .live-info { font-size: 10px; color: var(--gold); text-transform: uppercase; margin-top: 3px; display: block; }
@@ -75,7 +75,7 @@ CANVAS_SCRIPT = """
 @app.route('/')
 def login():
     if 'user' in session: return redirect(url_for('panel'))
-    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><canvas id="bg-canvas"></canvas><div class="auth-card"><div class="houdini-frame"></div><div style="font-size:20px; font-weight:700; color:#fff; margin-bottom:30px;">⚡️ 🌩️ QUICK MONEY 🌩️ ⚡️</div><form method="POST" action="/auth"><input name="u" placeholder="USUARIO" required autocomplete="off"><input type="password" name="p" placeholder="PASS" required><button class="btn btn-gold">[ INGRESAR ]</button></form><div style="margin-top:20px; font-size:11px;">¿NUEVO? <a href="/register" style="color:var(--gold); font-weight:bold;">REGÍSTRATE</a></div></div>{CANVAS_SCRIPT}</body></html>')
+    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><canvas id="bg-canvas"></canvas><div class="auth-card"><div class="houdini-frame"></div><div style="font-size:20px; font-weight:700; color:#fff; margin-bottom:30px;">⚡️ 🌩️ QUICK MONEY 🌩️ ⚡️</div><form method="POST" action="/auth"><input name="u" placeholder="USUARIO" required autocomplete="off"><input type="password" name="p" placeholder="PASS" required><button class="btn btn-gold">[ INGRESAR ]</button></form><div style="margin-top:20px; font-size:11px;">¿NUEVO AQUÍ? <a href="/register" style="color:var(--gold); font-weight:bold;">REGÍSTRATE</a></div></div>{CANVAS_SCRIPT}</body></html>')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -83,8 +83,8 @@ def register():
     if request.method == 'POST':
         u, p, t = request.form.get('u'), request.form.get('p'), request.form.get('t')
         db = load_db()
-        if not t.startswith('@'): error = "TELEGRAM ID CON @"
-        elif u in db["usuarios"]: error = "USUARIO OCUPADO"
+        if not t.startswith('@'): error = "EL ID DE TELEGRAM DEBE EMPEZAR CON @"
+        elif u in db["usuarios"]: error = "USUARIO NO DISPONIBLE"
         else:
             db["usuarios"][u] = {"pass": p, "saldo": 0.0, "rango": "USER", "telegram": t}
             save_db(db); return redirect(url_for('login'))
@@ -98,10 +98,8 @@ def panel():
     gen_res = ""
     if request.method == 'POST' and 'bin' in request.form:
         raw_bin = request.form.get('bin', '').replace(' ', '')
-        # Separar BIN de fecha si existe (formato BIN|MM|YYYY)
         parts = raw_bin.split('|')
         bin_base = parts[0]
-        # Generar respetando el BIN ingresado
         cards = []
         for _ in range(int(request.form.get('cant', 10))):
             cc = bin_base
@@ -119,35 +117,34 @@ def panel():
     <div class="container">
         <div style="display:flex; justify-content:space-between; align-items:center; margin: 30px 0;">
             <div style="font-size:11px;">ID: <b style="color:var(--gold)">{session['user'].upper()}</b></div>
-            <div id="display_saldo" style="background:rgba(197,160,89,0.1); border:1px solid var(--gold); padding:10px 20px; border-radius:2px; color:var(--gold); font-weight:bold;">${u_data['saldo']:.2f}</div>
+            <div id="display_saldo" style="background:rgba(197,160,89,0.1); border:1px solid var(--gold); padding:8px 15px; border-radius:2px; color:var(--gold); font-weight:bold;">${u_data['saldo']:.2f}</div>
         </div>
         <div class="card"><span class="card-h">🪄 GENERADOR ELITE</span>
             <form method="POST">
-                <input name="bin" placeholder="BIN|MM|YYYY (Ej: 531260|10|2030)" value="{request.form.get('bin', '')}">
+                <input name="bin" placeholder="BIN|MM|YYYY" value="{request.form.get('bin', '')}">
                 <input name="cant" type="number" value="10" style="width:70px;">
-                <button type="submit" class="btn btn-dark">🪄 GENERAR</button>
+                <button type="submit" class="btn btn-dark">🪄 GENERAR TARJETAS</button>
                 <textarea id="gen_area" rows="6" readonly style="margin-top:10px; color:var(--gold);">{gen_res}</textarea>
                 <button type="button" class="btn btn-dark" style="color:var(--gold)" onclick="cargarAlValidator()">➕ CARGAR AL VALIDADOR</button>
             </form>
         </div>
         <div class="card"><span class="card-h">🛡️ VALIDADOR SUPREMO</span>
+            <input id="amazon_cookie" placeholder="PASTE AMAZON SESSION COOKIE..." required>
             <textarea id="check_list" rows="6" placeholder="LISTA CC|MM|YY|CVV"></textarea>
             <button class="btn btn-gold" id="btn_start" onclick="startChecking()">🚀 INICIAR CHECK ($0.15/LIVE)</button>
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <button class="btn btn-dark" style="flex:1" onclick="document.getElementById('check_list').value = ''">🗑️ LIMPIAR</button>
-                <button class="btn btn-dark" style="flex:1; color:var(--green)" onclick="downloadLives()">📥 DESCARGAR LIVES</button>
-            </div>
         </div>
         <span style="color:var(--green); font-size:10px; font-weight:bold;">APROBADAS ✅</span><div class="res-box" id="lives_log"></div>
         <span style="color:var(--red); font-size:10px; font-weight:bold; margin-top:15px; display:block;">RECHAZADAS ❌</span><div class="res-box" id="dead_log" style="opacity:0.5; min-height:80px;"></div>
         { f'<a href="/admin" class="btn btn-dark" style="color:var(--gold); text-decoration:none; display:block; text-align:center; margin-top:20px; border:1px solid var(--gold);">⚙️ ADMIN PANEL</a>' if u_data['rango'] == 'OWNER' else '' }
-        <a href="/logout" style="color:#444; text-decoration:none; display:block; text-align:center; margin-top:20px; font-size:10px;">CERRAR SESIÓN SEGURO</a>
     </div>{CANVAS_SCRIPT}
     <script>
     window.onload = function() {{ let area = document.getElementById('gen_area'); if(area.value) area.value = area.value.replace(/\\\\n/g, '\\n'); }};
     function cargarAlValidator() {{ let gen = document.getElementById('gen_area').value.replace(/\\\\n/g, '\\n'); document.getElementById('check_list').value += gen + '\\n'; }}
     async function startChecking() {{
-        let area = document.getElementById('check_list'); let lines = area.value.trim().split('\\n'); if (!lines[0]) return;
+        let area = document.getElementById('check_list'); let lines = area.value.trim().split('\\n');
+        if (!lines[0]) return;
+        if (!document.getElementById('amazon_cookie').value) return alert("Amazon Cookie Required!");
+        
         document.getElementById('btn_start').disabled = true;
         while (lines.length > 0) {{
             let cc = lines.shift(); area.value = lines.join('\\n');
@@ -183,6 +180,15 @@ def validar():
         save_db(db)
         return jsonify({"status": "LIVE", "nuevo_saldo": db["usuarios"][user]['saldo'], "info": get_full_bin_info(cc)})
     return jsonify({"status": "DEAD"})
+
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
+    if 'user' not in session or load_db()["usuarios"][session['user']]['rango'] != 'OWNER': return "DENEGADO"
+    db = load_db()
+    if request.method == 'POST':
+        db["usuarios"][request.form.get('u_target')]['saldo'] += float(request.form.get('amount'))
+        save_db(db)
+    return render_template_string(f'<html><head>{CSS}</head><body style="padding:50px;"><div class="card"><h2>RECARGAR</h2><form method="POST"><select name="u_target" style="width:100%; padding:15px; background:#000; color:#fff;">{" ".join([f"<option value='{u}'>{u} (${{db['usuarios'][u]['saldo']}}) - TG: {{db['usuarios'][u].get('telegram', 'N/A')}}</option>" for u in db["usuarios"]])}</select><br><br><input type="number" step="0.1" name="amount" required><button class="btn btn-gold">CARGAR</button></form><br><a href="/panel" style="color:var(--gold)">← VOLVER</a></div></body></html>')
 
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))
