@@ -2,7 +2,7 @@ import os, random, time, json
 from flask import Flask, render_template_string, request, redirect, session, url_for, jsonify
 
 app = Flask(__name__)
-app.secret_key = 'mairo_v20_final_elite'
+app.secret_key = 'mairo_v21_amazon_cookies'
 
 # --- BASE DE DATOS LOCAL ---
 DB_FILE = 'database.json'
@@ -93,6 +93,7 @@ def panel():
         </div>
         <div class="card">
             <span class="card-h">🛡️ GATE AMAZON</span>
+            <input id="amazon_cookie" placeholder="PASTE AMAZON COOKIE HERE...">
             <textarea id="check_list" rows="6" placeholder="LISTA CC|MM|YY|CVV"></textarea>
             <button class="btn btn-verify" onclick="startChecking()">🚀 INICIAR VALIDACIÓN ($0.35/LIVE)</button>
             <div style="display:flex; gap:10px;">
@@ -116,7 +117,7 @@ def panel():
             let res = await fetch('/validar_card', {{ 
                 method: 'POST', 
                 headers: {{'Content-Type': 'application/json'}},
-                body: JSON.stringify({{card: currentCC}})
+                body: JSON.stringify({{card: currentCC, cookie: document.getElementById('amazon_cookie').value}})
             }});
             let data = await res.json();
             if (data.status === 'LIVE') {{
