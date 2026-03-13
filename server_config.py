@@ -2,7 +2,7 @@ import os, random, time, json
 from flask import Flask, render_template_string, request, redirect, session, url_for, jsonify
 
 app = Flask(__name__)
-app.secret_key = 'quick_money_v30_3_admin_chk'
+app.secret_key = 'quick_money_v30_4_clean_and_powerful'
 
 # --- BASE DE DATOS LOCAL ---
 DB_FILE = 'database.json'
@@ -41,9 +41,8 @@ CSS = """
     body { background: var(--bg); color: #fff; font-family: 'JetBrains Mono', monospace; margin: 0; padding: 10px; min-height: 100vh; overflow-x: hidden; }
     #bg-canvas { position: fixed; top:0; left:0; width:100%; height:100%; z-index: -1; opacity: 0.6; }
     .container { max-width: 500px; margin: auto; padding-bottom: 50px; position: relative; z-index: 10; }
-    .auth-card { background: var(--card); border: 1px solid var(--border); padding: 35px; width: 340px; text-align: center; border-top: 3px solid var(--gold); border-radius: 4px; }
-    .houdini-frame { width: 110px; height: 110px; border-radius: 50%; border: 2px solid var(--gold); margin: 0 auto 25px; background: url('https://i.postimg.cc/85zXp9XN/houdini-logo.png') center/cover; box-shadow: 0 0 25px rgba(197, 160, 89, 0.4); }
-    .chk-tag { font-size: 11px; color: var(--gold); letter-spacing: 4px; font-weight: 300; margin-top: -20px; margin-bottom: 30px; display: block; opacity: 0.8; }
+    .auth-card { background: var(--card); border: 1px solid var(--border); padding: 50px 35px; width: 340px; text-align: center; border-top: 3px solid var(--gold); border-radius: 4px; }
+    .chk-tag { font-size: 11px; color: var(--gold); letter-spacing: 4px; font-weight: 300; margin-top: -15px; margin-bottom: 40px; display: block; opacity: 0.8; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 20px; margin-bottom: 15px; backdrop-filter: blur(5px); }
     .card-h { font-size: 11px; color: var(--gold); text-transform: uppercase; font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; display: block; letter-spacing: 1.5px; }
     .live-item { border-bottom: 1px solid #111; padding: 10px 0; margin-bottom: 5px; }
@@ -74,7 +73,20 @@ CANVAS_SCRIPT = """
 @app.route('/')
 def login():
     if 'user' in session: return redirect(url_for('panel'))
-    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><canvas id="bg-canvas"></canvas><div class="auth-card"><div class="houdini-frame"></div><div style="font-size:20px; font-weight:700; color:#fff; margin-bottom:25px;">⚡️ 🌩️ QUICK MONEY 🌩️ ⚡️</div><span class="chk-tag">{{CHK}}</span><form method="POST" action="/auth"><input name="u" placeholder="USUARIO" required autocomplete="off"><input type="password" name="p" placeholder="PASS" required><button class="btn btn-gold">[ INGRESAR ]</button></form><div style="margin-top:20px; font-size:11px;">¿NUEVO AQUÍ? <a href="/register" style="color:var(--gold); font-weight:bold;">REGÍSTRATE</a></div></div>{CANVAS_SCRIPT}</body></html>')
+    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><canvas id="bg-canvas"></canvas><div class="auth-card"><div style="font-size:22px; font-weight:700; color:#fff; margin-bottom:25px;">⚡️ 🌩️ QUICK MONEY 🌩️ ⚡️</div><span class="chk-tag">{{CHK}}</span><form method="POST" action="/auth"><input name="u" placeholder="USUARIO" required autocomplete="off"><input type="password" name="p" placeholder="PASS" required><button class="btn btn-gold">[ INGRESAR ]</button></form><div style="margin-top:25px; font-size:11px;">¿NUEVO AQUÍ? <a href="/register" style="color:var(--gold); font-weight:bold; text-decoration:none;">REGÍSTRATE</a></div></div>{CANVAS_SCRIPT}</body></html>')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    error = None
+    if request.method == 'POST':
+        u, p, t = request.form.get('u'), request.form.get('p'), request.form.get('t')
+        db = load_db()
+        if not t.startswith('@'): error = "EL ID DE TELEGRAM DEBE EMPEZAR CON @"
+        elif u in db["usuarios"]: error = "USUARIO OCUPADO"
+        else:
+            db["usuarios"][u] = {"pass": p, "saldo": 0.0, "rango": "USER", "telegram": t}
+            save_db(db); return redirect(url_for('login'))
+    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><canvas id="bg-canvas"></canvas><div class="auth-card"><h2>REGISTRO SUPREMO</h2>{{% if error %}}<p style="color:var(--red)">{{{{error}}}}</p>{{% endif %}}<form method="POST"><input name="u" placeholder="USUARIO" required><input type="password" name="p" placeholder="PASS" required><input name="t" placeholder="TELEGRAM @ID" required><button class="btn btn-gold">CREAR CUENTA</button></form><a href="/" style="color:#555; font-size:11px;">VOLVER</a></div>{CANVAS_SCRIPT}</body></html>', error=error)
 
 @app.route('/panel', methods=['GET', 'POST'])
 def panel():
@@ -169,6 +181,15 @@ def validar():
         save_db(db)
         return jsonify({"status": "LIVE", "nuevo_saldo": db["usuarios"][user]['saldo'], "info": get_full_bin_info(cc)})
     return jsonify({"status": "DEAD"})
+
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
+    if 'user' not in session or load_db()["usuarios"][session['user']]['rango'] != 'OWNER': return "DENEGADO"
+    db = load_db()
+    if request.method == 'POST':
+        db["usuarios"][request.form.get('u_target')]['saldo'] += float(request.form.get('amount'))
+        save_db(db)
+    return render_template_string(f'<html><head>{CSS}</head><body style="padding:50px;"><div class="card"><h2>RECARGAR</h2><form method="POST"><select name="u_target" style="width:100%; padding:15px; background:#000; color:#fff; border:1px solid #333;">{" ".join([f"<option value='{u}'>{u} (${{db['usuarios'][u]['saldo']}}) - TG: {{db['usuarios'][u].get('telegram', 'N/A')}}</option>" for u in db["usuarios"]])}</select><br><br><input type="number" step="0.1" name="amount" required><button class="btn btn-gold">CARGAR</button></form><br><a href="/panel" style="color:var(--gold)">← VOLVER</a></div></body></html>')
 
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))
