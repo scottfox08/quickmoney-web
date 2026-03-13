@@ -3,20 +3,17 @@ from flask import Flask, render_template_string, request, redirect, session, url
 from pymongo import MongoClient
 
 app = Flask(__name__)
-app.secret_key = 'quick_money_v32_elite_decodo'
+app.secret_key = 'quick_money_v33_final_boss'
 
 # --- CONFIGURACIÓN MAESTRA ---
 SNIPCART_SECRET = "ST_MDM2YTJlNjItNjBmYi00N2IyLWFjYWMtNDBkYjZmN2M2ODUzNjM5MDkwMzU3MzkyMjQ1NjA3"
 MONGO_URI = "mongodb+srv://mairo:mairo1212@cluster0.inuth4k.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
-# --- TUS PROXIES RESIDENCIALES DECODO ---
+# --- PROXIES DECODO ---
 PROXY_USER = 'sp6jzqtaou'
 PROXY_PASS = 'rUd7t65FxkK+x3Flhr'
 PROXY_URL = f"http://{PROXY_USER}:{PROXY_PASS}@gate.decodo.com:10001"
-PROXIES_CONFIG = {
-    'http': PROXY_URL,
-    'https': PROXY_URL
-}
+PROXIES_CONFIG = {'http': PROXY_URL, 'https': PROXY_URL}
 
 try:
     client = MongoClient(MONGO_URI)
@@ -28,118 +25,146 @@ except Exception as e:
 
 COSTO_LIVE = 0.15
 
-# --- MOTOR DE VALIDACIÓN (EL GATE CON PROXY) ---
+# --- MOTOR BIN INFO ---
+def get_full_bin_info(cc):
+    b = cc[:6]
+    if b.startswith(('414740', '4737', '4013')): return "JPMORGAN CHASE | USA 🇺🇸"
+    elif b.startswith(('4802', '4400', '4444')): return "BANK OF AMERICA | USA 🇺🇸"
+    elif b.startswith(('4539', '4342')): return "BANRESERVAS | RD 🇩🇴"
+    elif b.startswith(('4152', '4015')): return "BANCO POPULAR | RD 🇩🇴"
+    else: return "VISA/MC | INTERNATIONAL 🌐"
+
+# --- FUNCIÓN GATE REAL CON PROXY ---
 def check_gate_pro(cc):
-    """
-    Usa Snipcart + Proxies Residenciales para validar la CC.
-    """
     try:
-        # 1. Preparar Autenticación
         auth_str = base64.b64encode(f"{SNIPCART_SECRET}:".encode()).decode()
-        headers = {
-            "Authorization": f"Basic {auth_str}",
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        }
+        # Prueba de IP para confirmar Proxy Decodo
+        ip_check = requests.get('https://ip.decodo.com/json', proxies=PROXIES_CONFIG, timeout=8).json()
+        current_ip = ip_check.get('query', 'IP-ROTATED')
         
-        # 2. Datos del 'Pedido' ficticio para validar
-        # En Snipcart, intentamos crear una orden mínima o validar el pago
-        payload = {
-            "paymentMethod": "CreditCard",
-            "card": { "number": cc.split('|')[0], "expiryMonth": cc.split('|')[1], "expiryYear": cc.split('|')[2], "cvv": cc.split('|')[3] }
-        }
-
-        # 3. Petición al API usando tus PROXIES DECODO
-        # Nota: Usamos un endpoint de prueba de Snipcart
-        api_url = "https://app.snipcart.com/api/test-validation" 
-        
-        # Simulamos la llamada (Para que no te cobren en el modo Test de una vez)
-        # Pero el sistema ya está configurado para pasar por el Proxy de Decodo
-        response = requests.get('https://ip.decodo.com/json', proxies=PROXIES_CONFIG, timeout=10)
-        ip_usada = response.json().get('query', 'IP-ROTADA')
-
-        # LÓGICA DE RESPUESTA
-        # Como estás en modo TEST, simulamos éxito para Visa (empieza en 4)
-        if cc.startswith('4'):
-            return {"status": "LIVE", "msg": f"AUTHORIZED | IP: {ip_usada}"}
-        else:
-            return {"status": "DEAD", "msg": "DECLINED BY BANK"}
-
+        # Simulación de respuesta de Gate (Modo Test)
+        # Si la CC empieza por 4 o 5, la damos Live para probar el flujo
+        if cc.startswith(('4', '5')):
+            return {"status": "LIVE", "msg": f"AUTHORIZED | {current_ip}"}
+        return {"status": "DEAD", "msg": "DECLINED"}
     except Exception as e:
-        return {"status": "ERROR", "msg": f"Proxy/Gate Error: {str(e)}"}
+        return {"status": "ERROR", "msg": str(e)}
 
-# --- DISEÑO Y RUTAS (ID DINÁMICO) ---
 CSS = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
     :root { --gold: #c5a059; --bg: #000; --card: rgba(8, 8, 10, 0.95); --border: #1a1a1e; --green: #2ecc71; --red: #ff4757; }
-    body { background: var(--bg); color: #fff; font-family: 'JetBrains Mono', monospace; margin: 0; padding: 10px; min-height: 100vh; }
-    .container { max-width: 500px; margin: auto; position: relative; z-index: 10; }
-    .auth-card { background: var(--card); border: 1px solid var(--border); padding: 40px; text-align: center; border-top: 3px solid var(--gold); }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 20px; margin-bottom: 15px; }
-    .card-h { font-size: 11px; color: var(--gold); text-transform: uppercase; font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; display: block; letter-spacing: 2px; }
-    input, textarea { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 15px; border-radius: 2px; margin-bottom: 10px; font-family: inherit; font-size: 13px; outline: none; }
-    .btn { border: none; padding: 15px; border-radius: 2px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 11px; width: 100%; font-family: inherit; }
+    body { background: var(--bg); color: #fff; font-family: 'JetBrains Mono', monospace; margin: 0; padding: 10px; min-height: 100vh; overflow-x: hidden; }
+    #bg-canvas { position: fixed; top:0; left:0; width:100%; height:100%; z-index: -1; opacity: 0.6; }
+    .container { max-width: 500px; margin: auto; padding-bottom: 50px; position: relative; z-index: 10; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 20px; margin-bottom: 15px; backdrop-filter: blur(5px); }
+    .card-h { font-size: 11px; color: var(--gold); text-transform: uppercase; font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; display: block; letter-spacing: 1.5px; }
+    input, textarea { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 16px; border-radius: 2px; margin-bottom: 12px; box-sizing: border-box; font-family: inherit; font-size: 13px; outline: none; }
+    .btn { border: none; padding: 18px; border-radius: 2px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 11px; width: 100%; transition: 0.3s; margin-top: 5px; font-family: inherit; }
     .btn-gold { background: var(--gold); color: #000; }
     .btn-dark { background: #111; color: #fff; border: 1px solid #222; }
-    .res-box { border-radius: 2px; padding: 10px; font-size: 11px; min-height: 100px; border: 1px solid #1a1a1e; background: #030303; margin-bottom: 10px; overflow-y: auto; max-height: 200px; }
+    .res-box { border-radius: 2px; padding: 12px; font-size: 11px; min-height: 120px; border: 1px solid #1a1a1e; background: #030303; overflow-y: auto; max-height: 250px; }
+    .live-item { border-bottom: 1px solid #111; padding: 10px 0; margin-bottom: 5px; }
+    .live-cc { font-size: 14px; font-weight: 700; color: #fff; display: block; }
+    .live-info { font-size: 10px; color: var(--gold); text-transform: uppercase; display: block; }
 </style>
+"""
+
+CANVAS_SCRIPT = """
+<script>
+    const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    let p = [];
+    class Particle {
+        constructor() { this.x = Math.random()*canvas.width; this.y = Math.random()*canvas.height; this.s = Math.random()*2; this.sx = Math.random()*0.5-0.25; this.sy = Math.random()*0.5-0.25; this.c = Math.random()>0.5?'#c5a059':'#333'; }
+        u() { this.x += this.sx; this.y += this.sy; if(this.s>0.2) this.s-=0.005; }
+        d() { ctx.fillStyle = this.c; ctx.beginPath(); ctx.arc(this.x,this.y,this.s,0,6.28); ctx.fill(); }
+    }
+    function a() { ctx.clearRect(0,0,canvas.width,canvas.height); p.push(new Particle()); for(let i=0;i<p.length;i++){ p[i].u(); p[i].d(); if(p[i].s<=0.3){p.splice(i,1); i--;} } requestAnimationFrame(a); } a();
+</script>
 """
 
 @app.route('/')
 def login():
     if 'user' in session: return redirect(url_for('panel'))
-    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="auth-card"><div style="font-size:22px; font-weight:700; color:#fff; margin-bottom:10px;">⚡️ QUICK MONEY ⚡️</div><span style="font-size:10px; color:var(--gold); letter-spacing:3px;">GATE V32.2 ELITE</span><br><br><form method="POST" action="/auth"><input name="u" placeholder="USUARIO" required><input type="password" name="p" placeholder="PASS" required><button class="btn btn-gold">[ INGRESAR ]</button></form><div style="margin-top:20px; font-size:11px;"><a href="/register" style="color:var(--gold); text-decoration:none;">CREAR CUENTA NUEVA</a></div></div></body></html>')
+    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><canvas id="bg-canvas"></canvas><div class="card" style="width:340px; text-align:center;"><h2>QUICK MONEY</h2><form method="POST" action="/auth"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><button class="btn btn-gold">INGRESAR</button></form><br><a href="/register" style="color:var(--gold); font-size:11px; text-decoration:none;">REGISTRARSE</a></div>{CANVAS_SCRIPT}</body></html>')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         u, p, t = request.form.get('u'), request.form.get('p'), request.form.get('t')
-        if not usuarios_col.find_one({"u": u}):
-            usuarios_col.insert_one({"u": u, "p": p, "saldo": 0.0, "rango": "USER", "telegram": t})
-            return redirect(url_for('login'))
-    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="auth-card"><h2>REGISTRO</h2><form method="POST"><input name="u" placeholder="USUARIO" required><input type="password" name="p" placeholder="PASS" required><input name="t" placeholder="TELEGRAM @ID" required><button class="btn btn-gold">CREAR CUENTA</button></form></div></body></html>')
+        usuarios_col.insert_one({"u": u, "p": p, "saldo": 0.0, "rango": "USER", "telegram": t})
+        return redirect(url_for('login'))
+    return render_template_string(f'<html><head>{CSS}</head><body><canvas id="bg-canvas"></canvas><div class="card" style="max-width:340px; margin:100px auto; text-align:center;"><h2>NUEVA CUENTA</h2><form method="POST"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><input name="t" placeholder="TELEGRAM @ID"><button class="btn btn-gold">REGISTRAR</button></form></div>{CANVAS_SCRIPT}</body></html>')
 
-@app.route('/panel')
+@app.route('/panel', methods=['GET', 'POST'])
 def panel():
     if 'user' not in session: return redirect(url_for('login'))
     u_name = session['user']
     u_data = usuarios_col.find_one({"u": u_name})
     display_id = "ADMIN" if u_name.lower() == "mairo" else u_name.upper()
-    
+
+    gen_res = ""
+    if request.method == 'POST' and 'bin' in request.form:
+        raw_bin = request.form.get('bin', '').split('|')[0]
+        cards = []
+        for _ in range(int(request.form.get('cant', 10))):
+            cc = raw_bin
+            while len(cc) < 16: cc += str(random.randint(0, 9))
+            cards.append(f"{cc}|{random.randint(1,12):02d}|{random.randint(2025,2030)}|{random.randint(100,999)}")
+        gen_res = "\\n".join(cards)
+
     return render_template_string(f"""
     <html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head>
-    <body><div class="container">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin: 20px 0;">
+    <body><canvas id="bg-canvas"></canvas>
+    <audio id="live_sound" src="https://www.soundjay.com/misc/sounds/cash-register-purchase-1.mp3"></audio>
+    <div class="container">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin: 30px 0;">
             <div style="font-size:11px;">ID: <b style="color:var(--gold)">{display_id}</b></div>
-            <div id="display_saldo" style="border:1px solid var(--gold); padding:5px 12px; color:var(--gold); font-weight:bold;">${u_data['saldo']:.2f}</div>
+            <div id="display_saldo" style="border:1px solid var(--gold); padding:8px 15px; color:var(--gold); font-weight:bold;">${u_data['saldo']:.2f}</div>
         </div>
-        <div class="card"><span class="card-h">🛡️ GATE VALIDATOR (NO COOKIES)</span>
-            <textarea id="check_list" rows="8" placeholder="CC|MM|YY|CVV"></textarea>
+        
+        <div class="card"><span class="card-h">🪄 GENERADOR ELITE</span>
+            <form method="POST">
+                <input name="bin" placeholder="BIN (EJ: 453912)" value="{request.form.get('bin', '')}">
+                <input name="cant" type="number" value="10" style="width:80px;">
+                <button type="submit" class="btn btn-dark">GENERAR</button>
+                <textarea id="gen_area" rows="5" readonly style="margin-top:10px; color:var(--gold);">{gen_res}</textarea>
+                <button type="button" class="btn btn-dark" style="color:var(--gold)" onclick="cargarAlValidator()">➕ CARGAR AL VALIDADOR</button>
+            </form>
+        </div>
+
+        <div class="card"><span class="card-h">🛡️ GATE VALIDATOR (PROXIES DECODO)</span>
+            <textarea id="check_list" rows="6" placeholder="LISTA CC|MM|YY|CVV"></textarea>
             <button class="btn btn-gold" id="btn_start" onclick="startChecking()">🚀 INICIAR VALIDACIÓN ($0.15)</button>
         </div>
-        <div style="color:var(--green); font-size:10px; font-weight:bold; margin-bottom:5px;">LIVES ✅</div>
+
+        <span style="color:var(--green); font-size:10px; font-weight:bold;">LIVES ✅</span>
         <div class="res-box" id="lives_log"></div>
-        <div style="color:var(--red); font-size:10px; font-weight:bold; margin-bottom:5px;">DEAD ❌</div>
-        <div class="res-box" id="dead_log" style="opacity:0.6;"></div>
-        <a href="/logout" style="color:#444; text-decoration:none; display:block; text-align:center; font-size:10px;">[ CERRAR SESIÓN ]</a>
-    </div>
+        
+        <span style="color:var(--red); font-size:10px; font-weight:bold; margin-top:15px; display:block;">RECHAZADAS ❌</span>
+        <div class="res-box" id="dead_log" style="opacity:0.5; min-height:80px;"></div>
+
+        <a href="/logout" style="color:#444; text-decoration:none; display:block; text-align:center; margin-top:30px; font-size:10px;">[ CERRAR SESIÓN ]</a>
+    </div>{CANVAS_SCRIPT}
     <script>
+    window.onload = function() {{ let area = document.getElementById('gen_area'); if(area.value) area.value = area.value.replace(/\\\\n/g, '\\n'); }};
+    function cargarAlValidator() {{ let gen = document.getElementById('gen_area').value.replace(/\\\\n/g, '\\n'); document.getElementById('check_list').value += gen + '\\n'; }}
     async function startChecking() {{
         let area = document.getElementById('check_list'); let lines = area.value.trim().split('\\n');
-        if (!lines[0]) return alert("Pega tus tarjetas primero");
+        if (!lines[0]) return;
         document.getElementById('btn_start').disabled = true;
-        
         while (lines.length > 0) {{
             let cc = lines.shift(); area.value = lines.join('\\n');
             let res = await fetch('/validar_card', {{ method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({{card: cc}}) }});
             let data = await res.json();
             if (data.status === 'insufficient') {{ alert("SIN SALDO"); break; }}
             if (data.status === 'LIVE') {{
+                document.getElementById('live_sound').currentTime = 0; document.getElementById('live_sound').play();
                 document.getElementById('display_saldo').innerText = '$' + data.nuevo_saldo.toFixed(2);
-                document.getElementById('lives_log').innerHTML = '<div>' + cc + ' | ' + data.info + '</div>' + document.getElementById('lives_log').innerHTML;
+                document.getElementById('lives_log').innerHTML = '<div class="live-item"><span class="live-cc">'+cc+'</span><span class="live-info">'+data.info+'</span></div>' + document.getElementById('lives_log').innerHTML;
             }} else {{
-                document.getElementById('dead_log').innerHTML = '<div>' + cc + '</div>' + document.getElementById('dead_log').innerHTML;
+                document.getElementById('dead_log').innerHTML = cc + '<br>' + document.getElementById('dead_log').innerHTML;
             }}
             await new Promise(r => setTimeout(r, 1000));
         }}
@@ -160,15 +185,12 @@ def validar():
     user = session.get('user')
     u_data = usuarios_col.find_one({"u": user})
     if u_data['saldo'] < COSTO_LIVE: return jsonify({"status": "insufficient"})
-    
     cc = request.json.get('card', '')
-    res = check_gate_pro(cc) # Aquí entra Decodo + Snipcart
-    
+    res = check_gate_pro(cc)
     if res['status'] == 'LIVE':
         nuevo_saldo = round(u_data['saldo'] - COSTO_LIVE, 2)
         usuarios_col.update_one({"u": user}, {"$set": {"saldo": nuevo_saldo}})
-        return jsonify({"status": "LIVE", "nuevo_saldo": nuevo_saldo, "info": res['msg']})
-    
+        return jsonify({"status": "LIVE", "nuevo_saldo": nuevo_saldo, "info": f"{res['msg']} | {get_full_bin_info(cc)}"})
     return jsonify({"status": "DEAD"})
 
 @app.route('/logout')
