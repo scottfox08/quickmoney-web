@@ -2,7 +2,7 @@ import os, random, time, json
 from flask import Flask, render_template_string, request, redirect, session, url_for, jsonify
 
 app = Flask(__name__)
-app.secret_key = 'mairo_v19_clean_fix'
+app.secret_key = 'mairo_v20_final_elite'
 
 # --- BASE DE DATOS LOCAL ---
 DB_FILE = 'database.json'
@@ -32,7 +32,7 @@ CSS = """
     .btn { border: none; padding: 14px; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 11px; width: 100%; transition: 0.3s; margin-top: 5px; }
     .btn-verify { background: linear-gradient(135deg, #d4af37 0%, #aa8a2e 100%); color: #000; }
     .badge-saldo { background: #1e2533; padding: 8px 20px; border-radius: 30px; border: 1px solid var(--gold); color: var(--gold); font-weight: bold; font-size: 12px; }
-    .res-box { border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; min-height: 60px; margin-top: 10px; overflow-y: auto; max-height: 200px; border: 1px solid #333; }
+    .res-box { border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; min-height: 80px; margin-top: 10px; overflow-y: auto; max-height: 200px; border: 1px solid #333; }
 </style>
 """
 
@@ -71,15 +71,7 @@ def panel():
         bin_v = raw[0][:6]
         m_f = raw[1] if len(raw) > 1 else None
         a_f = raw[2] if len(raw) > 2 else None
-        cant = int(request.form.get('cant', 10))
-        
-        cards = []
-        for _ in range(cant):
-            num = bin_v + "".join([str(random.randint(0,9)) for _ in range(16-len(bin_v))])
-            mes = m_f if m_f else f"{random.randint(1,12):02d}"
-            anio = a_f if a_f else str(random.randint(26,30))
-            cvv = "".join([str(random.randint(0,9)) for _ in range(3)])
-            cards.append(f"{num}|{mes}|{anio}|{cvv}")
+        cards = [f"{bin_v}{''.join([str(random.randint(0,9)) for _ in range(16-len(bin_v))])}|{m_f if m_f else f'{random.randint(1,12):02d}'}|{a_f if a_f else str(random.randint(26,30))}|{''.join([str(random.randint(0,9)) for _ in range(3)])}" for _ in range(int(request.form.get('cant', 10)))]
         gen_res = "\n".join(cards)
 
     return render_template_string(f"""
@@ -95,7 +87,7 @@ def panel():
                 <input name="bin" placeholder="BIN o BIN|MM|YYYY" value="{request.form.get('bin', '')}">
                 <input name="cant" type="number" value="10">
                 <button type="submit" class="btn" style="background:#232730; color:#fff;">🪄 GENERAR</button>
-                <textarea id="gen_area" rows="8" readonly style="color:var(--gold); white-space: pre; overflow-wrap: normal;">{gen_res}</textarea>
+                <textarea id="gen_area" rows="6" readonly style="color:var(--gold); white-space: pre;">{gen_res}</textarea>
                 <button type="button" class="btn" style="background:#7a632d;color:#ffeb3b" onclick="document.getElementById('check_list').value += document.getElementById('gen_area').value + '\\n'">➕ CARGAR AL VALIDADOR</button>
             </form>
         </div>
@@ -108,8 +100,8 @@ def panel():
                 <button class="btn" style="background:#2ecc71; color:#000; flex:1;" onclick="downloadLives()">📥 DESCARGAR</button>
             </div>
         </div>
-        <div class="card res-box" style="border-color:var(--green);"><div id="lives_log"></div></div>
-        <div class="card res-box" style="border-color:var(--red);"><div id="dead_log"></div></div>
+        <div class="card res-box" style="border-color:var(--green);"><span class="card-h" style="color:var(--green)">LIVES ✅</span><div id="lives_log"></div></div>
+        <div class="card res-box" style="border-color:var(--red);"><span class="card-h" style="color:var(--red)">DEAD ❌</span><div id="dead_log"></div></div>
         { f'<a href="/admin" class="btn" style="border:1px solid var(--gold); color:var(--gold); text-decoration:none; display:block; text-align:center;">⚙️ ADMIN</a>' if u_data['rango'] == 'OWNER' else '' }
         <button class="btn" style="background:transparent; border:1px solid #ff4757; color:#ff4757; margin-top:10px;" onclick="location.href='/logout'">🚪 CERRAR SESIÓN</button>
     </div>
