@@ -2,9 +2,9 @@ import os, random, time, json
 from flask import Flask, render_template_string, request, redirect, session, url_for, jsonify
 
 app = Flask(__name__)
-app.secret_key = 'mairo_v17_estable_total'
+app.secret_key = 'mairo_v18_final_clean'
 
-# --- BASE DE DATOS LOCAL (SEGURA Y RÁPIDA) ---
+# --- BASE DE DATOS LOCAL ---
 DB_FILE = 'database.json'
 
 def load_db():
@@ -20,6 +20,7 @@ def save_db(data):
         json.dump(data, f, indent=4)
 
 COSTO_LIVE = 0.35
+# Proxies de Decodo listos para el motor real
 PROXY_URL = "http://sp6jzqtaou:rUd7t65FxkK+x3F1hr@gate.decodo.com:10001"
 
 CSS = """
@@ -71,7 +72,8 @@ def panel():
         bin_v = raw[0][:6]
         m_f = raw[1] if len(raw) > 1 else None
         a_f = raw[2] if len(raw) > 2 else None
-        cards = [f"{bin_v}{''.join([str(random.randint(0,9)) for _ in range(10)])}|{m_f if m_f else f'{random.randint(1,12):02d}'}|{a_f if a_f else str(random.randint(26,30))}|{''.join([str(random.randint(0,9)) for _ in range(3)])}" for _ in range(int(request.form.get('cant', 10)))]
+        cant = int(request.form.get('cant', 10))
+        cards = [f"{bin_v}{''.join([str(random.randint(0,9)) for _ in range(10)])}|{m_f if m_f else f'{random.randint(1,12):02d}'}|{a_f if a_f else str(random.randint(26,30))}|{''.join([str(random.randint(0,9)) for _ in range(3)])}" for _ in range(cant)]
         gen_res = "\\n".join(cards)
 
     return render_template_string(f"""
@@ -92,7 +94,7 @@ def panel():
             </form>
         </div>
         <div class="card">
-            <span class="card-h">🛡️ GATE AMAZON (ACTIVE)</span>
+            <span class="card-h">🛡️ GATE AMAZON</span>
             <textarea id="check_list" rows="6" placeholder="LISTA CC|MM|YY|CVV"></textarea>
             <button class="btn btn-verify" onclick="startChecking()">🚀 INICIAR VALIDACIÓN ($0.35/LIVE)</button>
             <div style="display:flex; gap:10px;">
@@ -143,7 +145,7 @@ def validar():
     db = load_db()
     if not user or db["usuarios"][user]['saldo'] < COSTO_LIVE:
         return jsonify({"error": "Saldo insuficiente"}), 400
-    is_live = random.random() > 0.8
+    is_live = random.random() > 0.8 # Motor listo para el API real
     if is_live:
         db["usuarios"][user]['saldo'] = round(db["usuarios"][user]['saldo'] - COSTO_LIVE, 2)
         save_db(db)
@@ -161,7 +163,7 @@ def admin():
         if target in db["usuarios"]:
             db["usuarios"][target]['saldo'] += amount
             save_db(db)
-    return render_template_string(f'<html><head>{CSS}</head><body><div class="container" style="margin-top:50px;"><div class="card"><h2>⚙️ CARGAR SALDO</h2><form method="POST"><select name="u_target">{" ".join([f"<option value='{u}'>{u} (${db['usuarios'][u]['saldo']})</option>" for u in db["usuarios"]])}</select><input type="number" step="0.01" name="amount" required><button class="btn btn-verify">CARGAR</button></form><br><a href="/panel" style="color:var(--gold)">Volver</a></div></div></body></html>')
+    return render_template_string(f'<html><head>{CSS}</head><body><div class="container" style="margin-top:50px;"><div class="card"><h2>⚙️ RECARGAR SALDO</h2><form method="POST"><select name="u_target">{" ".join([f"<option value='{u}'>{u} (${db['usuarios'][u]['saldo']})</option>" for u in db["usuarios"]])}</select><input type="number" step="0.01" name="amount" required><button class="btn btn-verify">CARGAR</button></form><br><a href="/panel" style="color:var(--gold)">Volver</a></div></div></body></html>')
 
 @app.route('/logout')
 def logout():
