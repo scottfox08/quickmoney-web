@@ -2,7 +2,7 @@ import os, random, time, json
 from flask import Flask, render_template_string, request, redirect, session, url_for, jsonify
 
 app = Flask(__name__)
-app.secret_key = 'quick_money_v30_1_storm_final'
+app.secret_key = 'quick_money_v30_2_potencia_total'
 
 # --- BASE DE DATOS LOCAL ---
 DB_FILE = 'database.json'
@@ -16,17 +16,15 @@ def save_db(data):
 
 COSTO_LIVE = 0.15
 
-# --- MOTOR DE INTELIGENCIA DE BINS GLOBAL (V30.1) ---
+# --- MOTOR DE INTELIGENCIA DE BINS GLOBAL (V30.1 PRECISION) ---
 def get_full_bin_info(cc):
     b = cc[:6]
-    # USA
     if b.startswith(('414740', '4737', '4013', '4226', '4365', '4852', '4120')):
         return "JPMORGAN CHASE BANK N.A. | UNITED STATES 🇺🇸"
     elif b.startswith(('4802', '4400', '4444', '4000', '4026', '4147', '4266')):
         return "BANK OF AMERICA N.A. | UNITED STATES 🇺🇸"
     elif b.startswith(('5312', '5434', '4343', '4615', '5166', '4736')):
         return "WELLS FARGO BANK N.A. | UNITED STATES 🇺🇸"
-    # DOM
     elif b.startswith(('4539', '4342', '4031', '4052')):
         return "BANRESERVAS | DOMINICAN REPUBLIC 🇩🇴"
     elif b.startswith(('4152', '4015', '4214', '5498')):
@@ -135,7 +133,10 @@ def panel():
         </div>
         <span style="color:var(--green); font-size:10px; font-weight:bold;">APROBADAS ✅</span><div class="res-box" id="lives_log"></div>
         <span style="color:var(--red); font-size:10px; font-weight:bold; margin-top:15px; display:block;">RECHAZADAS ❌</span><div class="res-box" id="dead_log" style="opacity:0.5; min-height:80px;"></div>
+        
         { f'<a href="/admin" class="btn btn-dark" style="color:var(--gold); text-decoration:none; display:block; text-align:center; margin-top:20px; border:1px solid var(--gold);">⚙️ ADMIN PANEL</a>' if u_data['rango'] == 'OWNER' else '' }
+        
+        <a href="/logout" style="color:#444; text-decoration:none; display:block; text-align:center; margin-top:30px; font-size:10px; letter-spacing:1px;">[ CERRAR SESIÓN SEGURO ]</a>
     </div>{CANVAS_SCRIPT}
     <script>
     window.onload = function() {{ let area = document.getElementById('gen_area'); if(area.value) area.value = area.value.replace(/\\\\n/g, '\\n'); }};
@@ -188,7 +189,7 @@ def admin():
     if request.method == 'POST':
         db["usuarios"][request.form.get('u_target')]['saldo'] += float(request.form.get('amount'))
         save_db(db)
-    return render_template_string(f'<html><head>{CSS}</head><body style="padding:50px;"><div class="card"><h2>RECARGAR</h2><form method="POST"><select name="u_target" style="width:100%; padding:15px; background:#000; color:#fff;">{" ".join([f"<option value='{u}'>{u} (${{db['usuarios'][u]['saldo']}}) - TG: {{db['usuarios'][u].get('telegram', 'N/A')}}</option>" for u in db["usuarios"]])}</select><br><br><input type="number" step="0.1" name="amount" required><button class="btn btn-gold">CARGAR</button></form><br><a href="/panel" style="color:var(--gold)">← VOLVER</a></div></body></html>')
+    return render_template_string(f'<html><head>{CSS}</head><body style="padding:50px;"><div class="card"><h2>RECARGAR</h2><form method="POST"><select name="u_target" style="width:100%; padding:15px; background:#000; color:#fff; border:1px solid #333;">{" ".join([f"<option value='{u}'>{u} (${{db['usuarios'][u]['saldo']}}) - TG: {{db['usuarios'][u].get('telegram', 'N/A')}}</option>" for u in db["usuarios"]])}</select><br><br><input type="number" step="0.1" name="amount" required><button class="btn btn-gold">CARGAR</button></form><br><a href="/panel" style="color:var(--gold)">← VOLVER</a></div></body></html>')
 
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))
