@@ -2,7 +2,7 @@ import os, random, time, json
 from flask import Flask, render_template_string, request, redirect, session, url_for, jsonify
 
 app = Flask(__name__)
-app.secret_key = 'quick_money_v30_4_clean_and_powerful'
+app.secret_key = 'quick_money_v30_5_anti_free'
 
 # --- BASE DE DATOS LOCAL ---
 DB_FILE = 'database.json'
@@ -16,7 +16,7 @@ def save_db(data):
 
 COSTO_LIVE = 0.15
 
-# --- MOTOR DE INTELIGENCIA DE BINS GLOBAL ---
+# --- MOTOR DE INTELIGENCIA DE BINS ---
 def get_full_bin_info(cc):
     b = cc[:6]
     if b.startswith(('414740', '4737', '4013', '4226', '4365', '4852', '4120')):
@@ -86,7 +86,7 @@ def register():
         else:
             db["usuarios"][u] = {"pass": p, "saldo": 0.0, "rango": "USER", "telegram": t}
             save_db(db); return redirect(url_for('login'))
-    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><canvas id="bg-canvas"></canvas><div class="auth-card"><h2>REGISTRO SUPREMO</h2>{{% if error %}}<p style="color:var(--red)">{{{{error}}}}</p>{{% endif %}}<form method="POST"><input name="u" placeholder="USUARIO" required><input type="password" name="p" placeholder="PASS" required><input name="t" placeholder="TELEGRAM @ID" required><button class="btn btn-gold">CREAR CUENTA</button></form><a href="/" style="color:#555; font-size:11px;">VOLVER</a></div>{CANVAS_SCRIPT}</body></html>', error=error)
+    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><canvas id="bg-canvas"></canvas><div class="auth-card"><h2>REGISTRO</h2>{{% if error %}}<p style="color:var(--red)">{{{{error}}}}</p>{{% endif %}}<form method="POST"><input name="u" placeholder="USUARIO" required><input type="password" name="p" placeholder="PASS" required><input name="t" placeholder="TELEGRAM @ID" required><button class="btn btn-gold">CREAR CUENTA</button></form><a href="/" style="color:#555; font-size:11px;">VOLVER</a></div>{CANVAS_SCRIPT}</body></html>', error=error)
 
 @app.route('/panel', methods=['GET', 'POST'])
 def panel():
@@ -143,14 +143,29 @@ def panel():
     function cargarAlValidator() {{ let gen = document.getElementById('gen_area').value.replace(/\\\\n/g, '\\n'); document.getElementById('check_list').value += gen + '\\n'; }}
     async function startChecking() {{
         let area = document.getElementById('check_list'); let lines = area.value.trim().split('\\n');
+        let saldoStr = document.getElementById('display_saldo').innerText.replace('$', '');
+        let saldoActual = parseFloat(saldoStr);
+
         if (!lines[0]) return;
         if (!document.getElementById('amazon_cookie').value) return alert("Amazon Cookie Required!");
+        
+        // --- BLOQUEO POR SALDO ---
+        if (saldoActual < 0.15) {{
+            alert("FOUND INSUFFICIENT - Solo puedes validar si tiene saldo.");
+            return;
+        }}
         
         document.getElementById('btn_start').disabled = true;
         while (lines.length > 0) {{
             let cc = lines.shift(); area.value = lines.join('\\n');
             let res = await fetch('/validar_card', {{ method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({{card: cc}}) }});
             let data = await res.json();
+            
+            if (data.status === 'insufficient') {{
+                alert("FOUND INSUFFICIENT - Solo puedes validar si tiene saldo.");
+                break;
+            }}
+
             if (data.status === 'LIVE') {{
                 document.getElementById('live_sound').currentTime = 0; document.getElementById('live_sound').play();
                 document.getElementById('display_saldo').innerText = '$' + data.nuevo_saldo.toFixed(2);
@@ -174,8 +189,13 @@ def auth():
 @app.route('/validar_card', methods=['POST'])
 def validar():
     user = session.get('user'); db = load_db()
+    if not user: return jsonify({"status": "error"})
+    
+    # Check saldo en servidor para seguridad
+    if db["usuarios"][user]['saldo'] < COSTO_LIVE:
+        return jsonify({"status": "insufficient"})
+
     cc = request.json.get('card', '')
-    if not user or db["usuarios"][user]['saldo'] < COSTO_LIVE: return jsonify({"status": "error"})
     if random.random() > 0.8:
         db["usuarios"][user]['saldo'] = round(db["usuarios"][user]['saldo'] - COSTO_LIVE, 2)
         save_db(db)
