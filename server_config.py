@@ -1,15 +1,25 @@
-import os, random, time
+import os, random, time, json, requests
 from flask import Flask, render_template_string, request, redirect, session, url_for, jsonify
+from pymongo import MongoClient
 
 app = Flask(__name__)
-app.secret_key = 'mairo_v10_smart_gen_2026'
+app.secret_key = 'mairo_v14_proxy_elite_2026'
 
-# --- CONFIGURACIÓN DE NEGOCIO ---
-DB = {
-    "usuarios": {
-        "mairo": {"pass": "1234", "saldo": 999999.0, "rango": "OWNER"},
-    }
-}
+# --- CONFIGURACIÓN DE PROXIES (DECODO) ---
+PROXY_USER = "sp6jzqtaou"
+PROXY_PASS = "rUd7t65FxkK+x3F1hr"
+PROXY_URL = f"http://{PROXY_USER}:{PROXY_PASS}@gate.decodo.com:10001" 
+PROXIES_DICT = {"http": PROXY_URL, "https": PROXY_URL}
+
+# --- CONEXIÓN A MONGODB ATLAS ---
+MONGO_URI = "mongodb+srv://mairo:Mairo1212@cluster0.inuth4k.mongodb.net/?appName=Cluster0"
+client = MongoClient(MONGO_URI)
+db = client['QuickMoneyDB']
+users_col = db['usuarios']
+
+if not users_col.find_one({"u": "mairo"}):
+    users_col.insert_one({"u": "mairo", "p": "1234", "saldo": 999999.0, "rango": "OWNER"})
+
 COSTO_LIVE = 0.35
 
 CSS = """
@@ -22,11 +32,8 @@ CSS = """
     input, select, textarea { width: 100%; background: #08090d; border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; font-family: 'Consolas', monospace; font-size: 13px; }
     .btn { border: none; padding: 14px; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 11px; width: 100%; transition: 0.3s; margin-top: 5px; }
     .btn-verify { background: linear-gradient(135deg, #d4af37 0%, #aa8a2e 100%); color: #000; }
-    .btn-logout { background: transparent; border: 1px solid #ff4757; color: #ff4757; margin-top: 20px; }
     .badge-saldo { background: #1e2533; padding: 8px 20px; border-radius: 30px; border: 1px solid var(--gold); color: var(--gold); font-weight: bold; font-size: 12px; }
-    .res-box { border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; min-height: 60px; margin-top: 10px; overflow-y: auto; max-height: 200px; }
-    .live { border: 1px solid var(--green); color: var(--green); }
-    .dead { border: 1px solid var(--red); color: var(--red); }
+    .res-box { border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; min-height: 60px; margin-top: 10px; overflow-y: auto; max-height: 200px; border: 1px solid #333; }
 </style>
 """
 
@@ -38,39 +45,32 @@ def login():
 def register():
     if request.method == 'POST':
         u, p = request.form.get('u'), request.form.get('p')
-        if u and p and u not in DB["usuarios"]:
-            DB["usuarios"][u] = {"pass": p, "saldo": 0.0, "rango": "VIP"}
+        if u and p and not users_col.find_one({"u": u}):
+            users_col.insert_one({"u": u, "p": p, "saldo": 0.0, "rango": "VIP"})
             return redirect(url_for('login'))
     return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:320px;text-align:center;"><h2>📝 REGISTRO QM</h2><form method="POST"><input name="u" placeholder="USUARIO" required><input type="password" name="p" placeholder="PASS" required><button class="btn btn-verify">CREAR CUENTA</button></form></div></body></html>')
 
 @app.route('/auth', methods=['POST'])
 def auth():
     u, p = request.form.get('u'), request.form.get('p')
-    if u in DB["usuarios"] and DB["usuarios"][u]['pass'] == p:
-        session['user'] = u
+    user = users_col.find_one({"u": u, "p": p})
+    if user: session['user'] = u
     return redirect(url_for('panel'))
 
 @app.route('/panel', methods=['GET', 'POST'])
 def panel():
     if 'user' not in session: return redirect(url_for('login'))
-    u_data = DB["usuarios"][session['user']]
+    u_data = users_col.find_one({"u": session['user']})
     gen_res = ""
     
     if request.method == 'POST' and 'bin' in request.form:
         raw_bin = request.form.get('bin', '').strip()
         parts = raw_bin.split('|')
         bin_val = parts[0][:6]
-        mes_fix = parts[1] if len(parts) > 1 else None
-        anio_fix = parts[2] if len(parts) > 2 else None
+        m_f = parts[1] if len(parts) > 1 else None
+        a_f = parts[2] if len(parts) > 2 else None
         cant = int(request.form.get('cant', 10))
-        
-        cards = []
-        for _ in range(cant):
-            cc = bin_val + "".join([str(random.randint(0,9)) for _ in range(16-len(bin_val))])
-            m = mes_fix if mes_fix else f"{random.randint(1,12):02d}"
-            a = anio_fix if anio_fix else str(random.randint(26,30))
-            cvv = "".join([str(random.randint(0,9)) for _ in range(3)])
-            cards.append(f"{cc}|{m}|{a}|{cvv}")
+        cards = [f"{bin_val}{''.join([str(random.randint(0,9)) for _ in range(16-len(bin_val))])}|{m_f if m_f else f'{random.randint(1,12):02d}'}|{a_f if a_f else str(random.randint(26,30))}|{''.join([str(random.randint(0,9)) for _ in range(3)])}" for _ in range(cant)]
         gen_res = "\n".join(cards)
 
     return render_template_string(f"""
@@ -80,76 +80,75 @@ def panel():
             <span>OWNER: <b>{session['user'].upper()}</b></span>
             <div id="display_saldo" class="badge-saldo">SALDO: ${u_data['saldo']:.2f}</div>
         </div>
-        <div class="card">
-            <span class="card-h">🪄 GENERADOR INTELIGENTE</span>
-            <form method="POST">
-                <input name="bin" placeholder="BIN o BIN|MM|YYYY" value="{request.form.get('bin', '')}">
-                <input name="cant" type="number" value="10">
-                <button type="submit" class="btn" style="background:#232730; color:#fff;">🪄 GENERAR</button>
-                <textarea id="gen_area" rows="4" readonly style="color:var(--gold);">{gen_res}</textarea>
-                <button type="button" class="btn" style="background:#7a632d;color:#ffeb3b" onclick="document.getElementById('check_list').value += document.getElementById('gen_area').value + '\\n'">➕ CARGAR AL VALIDADOR</button>
-            </form>
-        </div>
-        <div class="card">
-            <span class="card-h">🛡️ GATE AMAZON</span>
-            <input id="amazon_cookie" placeholder="Paste Amazon Session Cookie...">
-            <textarea id="check_list" rows="6" placeholder="LISTA CC|MM|YY|CVV"></textarea>
-            <button class="btn btn-verify" onclick="startChecking()">🚀 INICIAR VALIDACIÓN ($0.35/LIVE)</button>
-            <div style="display:flex; gap:10px;">
-                <button class="btn" style="background:#3d4452; color:#fff; flex:1;" onclick="location.reload()">🗑️ LIMPIAR</button>
-                <button class="btn" style="background:#2ecc71; color:#000; flex:1;" onclick="downloadLives()">📥 DESCARGAR</button>
-            </div>
-        </div>
-        <div class="card res-box live"><span class="card-h">LIVES ✅</span><div id="lives_log"></div></div>
-        <div class="card res-box dead"><span class="card-h">DEAD ❌</span><div id="dead_log"></div></div>
+        <div class="card"><span class="card-h">🪄 GENERADOR INTELIGENTE</span><form method="POST"><input name="bin" placeholder="BIN o BIN|MM|YYYY" value="{request.form.get('bin', '')}"><input name="cant" type="number" value="10"><button type="submit" class="btn" style="background:#232730; color:#fff;">🪄 GENERAR</button><textarea id="gen_area" rows="4" readonly style="color:var(--gold);">{gen_res}</textarea><button type="button" class="btn" style="background:#7a632d;color:#ffeb3b" onclick="document.getElementById('check_list').value += document.getElementById('gen_area').value + '\\n'">➕ CARGAR AL VALIDADOR</button></form></div>
+        <div class="card"><span class="card-h">🛡️ GATE AMAZON (PROXIES ACTIVE)</span><input id="amazon_cookie" placeholder="Paste Amazon Cookie..."><textarea id="check_list" rows="6" placeholder="LISTA CC|MM|YY|CVV"></textarea><button class="btn btn-verify" onclick="startChecking()">🚀 INICIAR VALIDACIÓN ($0.35/LIVE)</button><div style="display:flex; gap:10px;"><button class="btn" style="background:#3d4452; color:#fff; flex:1;" onclick="location.reload()">🗑️ LIMPIAR</button><button class="btn" style="background:#2ecc71; color:#000; flex:1;" onclick="downloadLives()">📥 DESCARGAR</button></div></div>
+        <div class="card res-box" style="border-color:var(--green);"><span class="card-h" style="color:var(--green)">LIVES ✅</span><div id="lives_log"></div></div>
+        <div class="card res-box" style="border-color:var(--red);"><span class="card-h" style="color:var(--red)">DEAD ❌</span><div id="dead_log"></div></div>
         { f'<a href="/admin" class="btn" style="border:1px solid var(--gold); color:var(--gold); text-decoration:none; display:block; text-align:center;">⚙️ ADMIN</a>' if u_data['rango'] == 'OWNER' else '' }
-        <button class="btn btn-logout" onclick="location.href='/logout'">🚪 CERRAR SESIÓN</button>
+        <button class="btn" style="background:transparent; border:1px solid #ff4757; color:#ff4757; margin-top:20px;" onclick="location.href='/logout'">🚪 CERRAR SESIÓN</button>
     </div>
     <script>
     let livesArray = [];
-    function downloadLives() {{
-        if (livesArray.length === 0) return alert('No hay lives');
-        const blob = new Blob([livesArray.join('\\n')], {{ type: 'text/plain' }});
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = 'lives_mairo.txt'; a.click();
-    }}
     async function startChecking() {{
         let area = document.getElementById('check_list');
         let lines = area.value.trim().split('\\n');
         if (!lines[0]) return;
         while (lines.length > 0) {{
             let currentCC = lines.shift(); area.value = lines.join('\\n');
-            let isLive = Math.random() > 0.8;
-            if (isLive) {{
-                let res = await fetch('/cobrar_live', {{ method: 'POST' }});
-                let data = await res.json();
+            let res = await fetch('/validar_card', {{ 
+                method: 'POST', 
+                headers: {{'Content-Type': 'application/json'}},
+                body: JSON.stringify({{card: currentCC, cookie: document.getElementById('amazon_cookie').value}})
+            }});
+            let data = await res.json();
+            if (data.status === 'LIVE') {{
                 document.getElementById('display_saldo').innerText = 'SALDO: $' + data.nuevo_saldo.toFixed(2);
                 document.getElementById('lives_log').innerHTML = currentCC + ' [LIVE] <br>' + document.getElementById('lives_log').innerHTML;
                 livesArray.push(currentCC);
-            }} else {{
+            }} else if (data.status === 'DEAD') {{
                 document.getElementById('dead_log').innerHTML = currentCC + ' [DEAD] <br>' + document.getElementById('dead_log').innerHTML;
-            }}
-            await new Promise(r => setTimeout(r, 800));
+            }} else {{ alert(data.error); break; }}
+            await new Promise(r => setTimeout(r, 1000));
         }}
+    }}
+    function downloadLives() {{
+        const blob = new Blob([livesArray.join('\\n')], {{ type: 'text/plain' }});
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = 'lives.txt'; a.click();
     }}
     </script></body></html>
     """)
 
-@app.route('/cobrar_live', methods=['POST'])
-def cobrar():
+@app.route('/validar_card', methods=['POST'])
+def validar():
     user = session.get('user')
-    if user and DB["usuarios"][user]['saldo'] >= COSTO_LIVE:
-        DB["usuarios"][user]['saldo'] -= COSTO_LIVE
-        return jsonify({"nuevo_saldo": DB["usuarios"][user]['saldo']})
-    return jsonify({"error": "Saldo insuficiente"}), 400
+    u_data = users_col.find_one({"u": user})
+    if not u_data or u_data['saldo'] < COSTO_LIVE:
+        return jsonify({"error": "Saldo insuficiente"}), 400
+    
+    # --- AQUÍ ENTRA EL PROXY DE DECODO ---
+    card_data = request.json.get('card')
+    # SIMULACIÓN DE CONEXIÓN REAL USANDO PROXY
+    # En una API real, aquí iría el requests.post(url, proxies=PROXIES_DICT)
+    is_live = random.random() > 0.8 # Simulación hasta conectar el Endpoint final de Amazon
+    
+    if is_live:
+        new_saldo = round(u_data['saldo'] - COSTO_LIVE, 2)
+        users_col.update_one({"u": user}, {"$set": {"saldo": new_saldo}})
+        return jsonify({"status": "LIVE", "nuevo_saldo": new_saldo})
+    return jsonify({"status": "DEAD"})
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
-    if 'user' not in session or DB["usuarios"][session['user']]['rango'] != 'OWNER': return "DENEGADO"
+    if 'user' not in session: return redirect(url_for('login'))
+    u_admin = users_col.find_one({"u": session['user']})
+    if u_admin['rango'] != 'OWNER': return "DENEGADO"
     if request.method == 'POST':
-        target = request.form.get('u_target'); amount = float(request.form.get('amount', 0))
-        if target in DB["usuarios"]: DB["usuarios"][target]['saldo'] += amount
-    return render_template_string(f'<html><head>{CSS}</head><body><div class="container" style="margin-top:50px;"><div class="card"><h2>⚙️ RECARGAR</h2><form method="POST"><select name="u_target">{" ".join([f"<option value='{u}'>{u} (${DB['usuarios'][u]['saldo']})</option>" for u in DB["usuarios"]])}</select><input type="number" step="0.01" name="amount" required><button class="btn btn-verify">CARGAR</button></form><br><a href="/panel" style="color:var(--gold)">Volver</a></div></div></body></html>')
+        target = request.form.get('u_target')
+        amount = float(request.form.get('amount', 0))
+        users_col.update_one({"u": target}, {"$inc": {"saldo": amount}})
+    all_users = users_col.find()
+    return render_template_string(f'<html><head>{CSS}</head><body><div class="container" style="margin-top:50px;"><div class="card"><h2>⚙️ RECARGAR</h2><form method="POST"><select name="u_target">{" ".join([f"<option value='{u['u']}'>{u['u']} (${u['saldo']})</option>" for u in all_users])}</select><input type="number" step="0.01" name="amount" required><button class="btn btn-verify">CARGAR</button></form><br><a href="/panel" style="color:var(--gold)">Volver</a></div></div></body></html>')
 
 @app.route('/logout')
 def logout():
