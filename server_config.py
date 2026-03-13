@@ -1,23 +1,17 @@
 import os, random, time, json, requests
 from flask import Flask, render_template_string, request, redirect, session, url_for, jsonify
-try:
-    from pymongo import MongoClient
-except ImportError:
-    pass # Render lo instalará con el requirements.txt
+from pymongo import MongoClient
 
 app = Flask(__name__)
-app.secret_key = 'mairo_v14_fixed_2026'
+app.secret_key = 'mairo_v15_final_fix'
 
-# --- CONFIGURACIÓN DE PROXIES (DECODO) ---
-PROXY_URL = "http://sp6jzqtaou:rUd7t65FxkK+x3F1hr@gate.decodo.com:10001" 
-
-# --- CONEXIÓN A MONGODB ATLAS ---
+# --- MONGODB ATLAS ---
 MONGO_URI = "mongodb+srv://mairo:Mairo1212@cluster0.inuth4k.mongodb.net/?retryWrites=true&w=majority"
 client = MongoClient(MONGO_URI)
 db = client['QuickMoneyDB']
 users_col = db['usuarios']
 
-# Asegurar que Mairo siempre existe
+# Garantizar Owner
 if not users_col.find_one({"u": "mairo"}):
     users_col.insert_one({"u": "mairo", "p": "1234", "saldo": 999999.0, "rango": "OWNER"})
 
@@ -29,7 +23,6 @@ CSS = """
     body { background: radial-gradient(circle at center, #1a150a 0%, #050507 70%); background-attachment: fixed; color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 10px; min-height: 100vh; }
     .container { max-width: 550px; margin: auto; padding-bottom: 50px; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); backdrop-filter: blur(5px); }
-    .card-h { font-size: 11px; color: var(--gold); text-transform: uppercase; font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 15px; display: block; }
     input, select, textarea { width: 100%; background: #08090d; border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; font-family: 'Consolas', monospace; font-size: 13px; }
     .btn { border: none; padding: 14px; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 11px; width: 100%; transition: 0.3s; margin-top: 5px; }
     .btn-verify { background: linear-gradient(135deg, #d4af37 0%, #aa8a2e 100%); color: #000; }
@@ -40,7 +33,7 @@ CSS = """
 
 @app.route('/')
 def login():
-    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:320px;text-align:center;border-top:4px solid var(--gold);"><h2>🦁 QUICK MONEY</h2><form method="POST" action="/auth"><input name="u" placeholder="USUARIO" required><input type="password" name="p" placeholder="PASS" required><button class="btn btn-verify">INGRESAR</button></form><p style="font-size:11px;margin-top:15px;">¿No tienes cuenta? <a href="/register" style="color:var(--gold);text-decoration:none;">REGÍSTRATE</a></p></div></body></html>')
+    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:320px;text-align:center;border-top:4px solid var(--gold);"><h2>🦁 QUICK MONEY</h2><form method="POST" action="/auth"><input name="u" placeholder="USUARIO" required><input type="password" name="p" placeholder="PASS" required><button class="btn btn-verify" style="width:100%">INGRESAR</button></form><p style="font-size:11px;margin-top:15px;">¿No tienes cuenta? <a href="/register" style="color:var(--gold);text-decoration:none;">REGÍSTRATE</a></p></div></body></html>')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -49,7 +42,7 @@ def register():
         if u and p and not users_col.find_one({"u": u}):
             users_col.insert_one({"u": u, "p": p, "saldo": 0.0, "rango": "VIP"})
             return redirect(url_for('login'))
-    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:320px;text-align:center;"><h2>📝 REGISTRO QM</h2><form method="POST"><input name="u" placeholder="USUARIO" required><input type="password" name="p" placeholder="PASS" required><button class="btn btn-verify">CREAR CUENTA</button></form></div></body></html>')
+    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:320px;text-align:center;"><h2>📝 REGISTRO QM</h2><form method="POST"><input name="u" placeholder="USUARIO" required><input type="password" name="p" placeholder="PASS" required><button class="btn btn-verify" style="width:100%">CREAR CUENTA</button></form></div></body></html>')
 
 @app.route('/auth', methods=['POST'])
 def auth():
@@ -64,13 +57,12 @@ def panel():
     u_data = users_col.find_one({"u": session['user']})
     gen_res = ""
     if request.method == 'POST' and 'bin' in request.form:
-        raw_bin = request.form.get('bin', '').strip()
-        parts = raw_bin.split('|')
-        bin_val = parts[0][:6]
-        m_f = parts[1] if len(parts) > 1 else None
-        a_f = parts[2] if len(parts) > 2 else None
-        cards = [f"{bin_val}{''.join([str(random.randint(0,9)) for _ in range(16-len(bin_val))])}|{m_f if m_f else f'{random.randint(1,12):02d}'}|{a_f if a_f else str(random.randint(26,30))}|{''.join([str(random.randint(0,9)) for _ in range(3)])}" for _ in range(int(request.form.get('cant', 10)))]
-        gen_res = "\n".join(cards)
+        raw_bin = request.form.get('bin', '').strip().split('|')
+        bin_val = raw_bin[0][:6]
+        m_f = raw_bin[1] if len(raw_bin) > 1 else None
+        a_f = raw_bin[2] if len(raw_bin) > 2 else None
+        cards = [f"{bin_val}{''.join([str(random.randint(0,9)) for _ in range(10)])}|{m_f if m_f else f'{random.randint(1,12):02d}'}|{a_f if a_f else str(random.randint(26,30))}|{''.join([str(random.randint(0,9)) for _ in range(3)])}" for _ in range(int(request.form.get('cant', 10)))]
+        gen_res = "\\n".join(cards)
 
     return render_template_string(f"""
     <html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head>
@@ -79,41 +71,37 @@ def panel():
             <span>OWNER: <b>{session['user'].upper()}</b></span>
             <div id="display_saldo" class="badge-saldo">SALDO: ${u_data['saldo']:.2f}</div>
         </div>
-        <div class="card"><span class="card-h">🪄 GENERADOR INTELIGENTE</span><form method="POST"><input name="bin" placeholder="BIN o BIN|MM|YYYY" value="{request.form.get('bin', '')}"><input name="cant" type="number" value="10"><button type="submit" class="btn" style="background:#232730; color:#fff;">🪄 GENERAR</button><textarea id="gen_area" rows="4" readonly style="color:var(--gold);">{gen_res}</textarea><button type="button" class="btn" style="background:#7a632d;color:#ffeb3b" onclick="document.getElementById('check_list').value += document.getElementById('gen_area').value + '\\n'">➕ CARGAR AL VALIDADOR</button></form></div>
-        <div class="card"><span class="card-h">🛡️ GATE AMAZON (PROXIES ACTIVE)</span><input id="amazon_cookie" placeholder="Paste Amazon Cookie..."><textarea id="check_list" rows="6" placeholder="LISTA CC|MM|YY|CVV"></textarea><button class="btn btn-verify" onclick="startChecking()">🚀 INICIAR VALIDACIÓN ($0.35/LIVE)</button><div style="display:flex; gap:10px;"><button class="btn" style="background:#3d4452; color:#fff; flex:1;" onclick="location.reload()">🗑️ LIMPIAR</button><button class="btn" style="background:#2ecc71; color:#000; flex:1;" onclick="downloadLives()">📥 DESCARGAR</button></div></div>
-        <div class="card res-box" style="border-color:var(--green);"><span class="card-h" style="color:var(--green)">LIVES ✅</span><div id="lives_log"></div></div>
-        <div class="card res-box" style="border-color:var(--red);"><span class="card-h" style="color:var(--red)">DEAD ❌</span><div id="dead_log"></div></div>
-        { f'<a href="/admin" class="btn" style="border:1px solid var(--gold); color:var(--gold); text-decoration:none; display:block; text-align:center;">⚙️ ADMIN</a>' if u_data['rango'] == 'OWNER' else '' }
-        <button class="btn" style="background:transparent; border:1px solid #ff4757; color:#ff4757; margin-top:20px;" onclick="location.href='/logout'">🚪 CERRAR SESIÓN</button>
+        <div class="card">
+            <input name="bin" id="bin_input" placeholder="BIN o BIN|MM|YYYY">
+            <input id="cant_input" type="number" value="10">
+            <button class="btn" style="background:#232730; color:#fff;" onclick="window.location.reload()">🪄 GENERAR (POST)</button>
+            <textarea id="check_list" rows="6" placeholder="LISTA CC|MM|YY|CVV"></textarea>
+            <button class="btn btn-verify" onclick="startChecking()">🚀 INICIAR VALIDACIÓN ($0.35/LIVE)</button>
+        </div>
+        <div class="card res-box" style="border-color:var(--green);"><div id="lives_log"></div></div>
+        <div class="card res-box" style="border-color:var(--red);"><div id="dead_log"></div></div>
+        <button class="btn" style="background:transparent; border:1px solid #ff4757; color:#ff4757;" onclick="location.href='/logout'">🚪 SALIR</button>
     </div>
     <script>
-    let livesArray = [];
     async function startChecking() {{
         let area = document.getElementById('check_list');
         let lines = area.value.trim().split('\\n');
-        if (!lines[0]) return;
         while (lines.length > 0) {{
             let currentCC = lines.shift(); area.value = lines.join('\\n');
             let res = await fetch('/validar_card', {{ 
                 method: 'POST', 
                 headers: {{'Content-Type': 'application/json'}},
-                body: JSON.stringify({{card: currentCC, cookie: document.getElementById('amazon_cookie').value}})
+                body: JSON.stringify({{card: currentCC}})
             }});
             let data = await res.json();
             if (data.status === 'LIVE') {{
                 document.getElementById('display_saldo').innerText = 'SALDO: $' + data.nuevo_saldo.toFixed(2);
                 document.getElementById('lives_log').innerHTML = currentCC + ' [LIVE] <br>' + document.getElementById('lives_log').innerHTML;
-                livesArray.push(currentCC);
-            }} else if (data.status === 'DEAD') {{
+            }} else {{
                 document.getElementById('dead_log').innerHTML = currentCC + ' [DEAD] <br>' + document.getElementById('dead_log').innerHTML;
-            }} else {{ alert(data.error); break; }}
+            }}
             await new Promise(r => setTimeout(r, 1000));
         }}
-    }}
-    function downloadLives() {{
-        const blob = new Blob([livesArray.join('\\n')], {{ type: 'text/plain' }});
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = 'lives.txt'; a.click();
     }}
     </script></body></html>
     """)
@@ -124,25 +112,12 @@ def validar():
     u_data = users_col.find_one({"u": user})
     if not u_data or u_data['saldo'] < COSTO_LIVE:
         return jsonify({"error": "Saldo insuficiente"}), 400
-    
-    # Simulación por ahora hasta tener el endpoint final
     is_live = random.random() > 0.8
     if is_live:
         new_saldo = round(u_data['saldo'] - COSTO_LIVE, 2)
         users_col.update_one({"u": user}, {"$set": {"saldo": new_saldo}})
         return jsonify({"status": "LIVE", "nuevo_saldo": new_saldo})
     return jsonify({"status": "DEAD"})
-
-@app.route('/admin', methods=['GET', 'POST'])
-def admin():
-    if 'user' not in session: return redirect(url_for('login'))
-    u_admin = users_col.find_one({"u": session['user']})
-    if u_admin['rango'] != 'OWNER': return "DENEGADO"
-    if request.method == 'POST':
-        target = request.form.get('u_target'); amount = float(request.form.get('amount', 0))
-        users_col.update_one({"u": target}, {"$inc": {"saldo": amount}})
-    all_users = users_col.find()
-    return render_template_string(f'<html><head>{CSS}</head><body><div class="container" style="margin-top:50px;"><div class="card"><h2>⚙️ RECARGAR</h2><form method="POST"><select name="u_target">{" ".join([f"<option value='{u['u']}'>{u['u']} (${u['saldo']})</option>" for u in all_users])}</select><input type="number" step="0.01" name="amount" required><button class="btn btn-verify">CARGAR</button></form><br><a href="/panel" style="color:var(--gold)">Volver</a></div></div></body></html>')
 
 @app.route('/logout')
 def logout():
