@@ -2,7 +2,7 @@ import os, random, time, json
 from flask import Flask, render_template_string, request, redirect, session, url_for, jsonify
 
 app = Flask(__name__)
-app.secret_key = 'mairo_v18_final_clean'
+app.secret_key = 'mairo_v19_clean_fix'
 
 # --- BASE DE DATOS LOCAL ---
 DB_FILE = 'database.json'
@@ -20,8 +20,6 @@ def save_db(data):
         json.dump(data, f, indent=4)
 
 COSTO_LIVE = 0.35
-# Proxies de Decodo listos para el motor real
-PROXY_URL = "http://sp6jzqtaou:rUd7t65FxkK+x3F1hr@gate.decodo.com:10001"
 
 CSS = """
 <style>
@@ -40,7 +38,7 @@ CSS = """
 
 @app.route('/')
 def login():
-    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:320px;text-align:center;border-top:4px solid var(--gold);"><h2>🦁 QUICK MONEY</h2><form method="POST" action="/auth"><input name="u" placeholder="USUARIO" required><input type="password" name="p" placeholder="PASS" required><button class="btn btn-verify" style="width:100%">INGRESAR</button></form><p style="font-size:11px;margin-top:15px;">¿No tienes cuenta? <a href="/register" style="color:var(--gold);text-decoration:none;">REGÍSTRATE</a></p></div></body></html>')
+    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:320px;text-align:center;border-top:4px solid var(--gold);"><h2>🦁 QUICK MONEY</h2><form method="POST" action="/auth"><input name="u" placeholder="USUARIO" required><input type="password" name="p" placeholder="PASS" required><button class="btn btn-verify" style="width:100%">INGRESAR</button></form><p style="font-size:11px;margin-top:15px;"><a href="/register" style="color:var(--gold);text-decoration:none;">REGÍSTRATE</a></p></div></body></html>')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -67,14 +65,22 @@ def panel():
     db = load_db()
     u_data = db["usuarios"][session['user']]
     gen_res = ""
+    
     if request.method == 'POST' and 'bin' in request.form:
         raw = request.form.get('bin', '').strip().split('|')
         bin_v = raw[0][:6]
         m_f = raw[1] if len(raw) > 1 else None
         a_f = raw[2] if len(raw) > 2 else None
         cant = int(request.form.get('cant', 10))
-        cards = [f"{bin_v}{''.join([str(random.randint(0,9)) for _ in range(10)])}|{m_f if m_f else f'{random.randint(1,12):02d}'}|{a_f if a_f else str(random.randint(26,30))}|{''.join([str(random.randint(0,9)) for _ in range(3)])}" for _ in range(cant)]
-        gen_res = "\\n".join(cards)
+        
+        cards = []
+        for _ in range(cant):
+            num = bin_v + "".join([str(random.randint(0,9)) for _ in range(16-len(bin_v))])
+            mes = m_f if m_f else f"{random.randint(1,12):02d}"
+            anio = a_f if a_f else str(random.randint(26,30))
+            cvv = "".join([str(random.randint(0,9)) for _ in range(3)])
+            cards.append(f"{num}|{mes}|{anio}|{cvv}")
+        gen_res = "\n".join(cards)
 
     return render_template_string(f"""
     <html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head>
@@ -84,12 +90,12 @@ def panel():
             <div id="display_saldo" class="badge-saldo">SALDO: ${u_data['saldo']:.2f}</div>
         </div>
         <div class="card">
-            <span class="card-h">🪄 GENERADOR INTELIGENTE</span>
+            <span class="card-h">🪄 GENERADOR ELITE</span>
             <form method="POST">
                 <input name="bin" placeholder="BIN o BIN|MM|YYYY" value="{request.form.get('bin', '')}">
                 <input name="cant" type="number" value="10">
                 <button type="submit" class="btn" style="background:#232730; color:#fff;">🪄 GENERAR</button>
-                <textarea id="gen_area" rows="4" readonly style="color:var(--gold);">{gen_res}</textarea>
+                <textarea id="gen_area" rows="8" readonly style="color:var(--gold); white-space: pre; overflow-wrap: normal;">{gen_res}</textarea>
                 <button type="button" class="btn" style="background:#7a632d;color:#ffeb3b" onclick="document.getElementById('check_list').value += document.getElementById('gen_area').value + '\\n'">➕ CARGAR AL VALIDADOR</button>
             </form>
         </div>
@@ -145,7 +151,7 @@ def validar():
     db = load_db()
     if not user or db["usuarios"][user]['saldo'] < COSTO_LIVE:
         return jsonify({"error": "Saldo insuficiente"}), 400
-    is_live = random.random() > 0.8 # Motor listo para el API real
+    is_live = random.random() > 0.8
     if is_live:
         db["usuarios"][user]['saldo'] = round(db["usuarios"][user]['saldo'] - COSTO_LIVE, 2)
         save_db(db)
