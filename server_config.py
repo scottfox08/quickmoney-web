@@ -2,7 +2,7 @@ import os, random, time
 from flask import Flask, render_template_string, request, redirect, session, url_for, jsonify
 
 app = Flask(__name__)
-app.secret_key = 'mairo_clean_final_2026'
+app.secret_key = 'mairo_ultimate_v9_2026'
 
 # --- CONFIGURACIÓN DE NEGOCIO (FIJA) ---
 DB = {
@@ -21,10 +21,11 @@ CSS = """
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 20px var(--gold-glow); backdrop-filter: blur(5px); }
     .card-h { font-size: 11px; color: var(--gold); text-transform: uppercase; font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 15px; display: block; letter-spacing: 1px; }
     input, select, textarea { width: 100%; background: #08090d; border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 8px; margin-bottom: 10px; box-sizing: border-box; font-family: 'Consolas', monospace; font-size: 13px; }
-    .btn { border: none; padding: 14px; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 11px; width: 100%; transition: 0.3s; }
+    .btn { border: none; padding: 14px; border-radius: 6px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 11px; width: 100%; transition: 0.3s; margin-top: 5px; }
     .btn-verify { background: linear-gradient(135deg, #d4af37 0%, #aa8a2e 100%); color: #000; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3); }
-    .btn-clean { background: #3d4452; color: #fff; margin-top: 10px; border: 1px solid #555; }
-    .btn-gen { background: #232730; color: #fff; border: 1px solid #333; margin-bottom: 10px; }
+    .btn-download { background: #2ecc71; color: #000; margin-top: 10px; }
+    .btn-clean { background: #3d4452; color: #fff; border: 1px solid #555; }
+    .btn-logout { background: transparent; border: 1px solid #ff4757; color: #ff4757; margin-top: 20px; }
     .badge-saldo { background: linear-gradient(45deg, #1e2533, #0d0f14); padding: 8px 20px; border-radius: 30px; border: 1px solid var(--gold); color: var(--gold); font-weight: bold; font-size: 12px; box-shadow: 0 0 15px var(--gold-glow); }
     .res-box { border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px; min-height: 60px; margin-top: 10px; overflow-y: auto; max-height: 200px; }
     .live { border: 1px solid var(--green); color: var(--green); background: rgba(46, 204, 113, 0.05); }
@@ -34,7 +35,7 @@ CSS = """
 
 @app.route('/')
 def login():
-    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:320px;text-align:center;border-top:4px solid var(--gold);"><h2>🦁 QM ELITE</h2><form method="POST" action="/auth"><input name="u" placeholder="USUARIO" required><input type="password" name="p" placeholder="PASS" required><button class="btn btn-verify" style="margin-top:10px;">INGRESAR</button></form><p style="font-size:11px;margin-top:15px;">¿No tienes cuenta? <a href="/register" style="color:var(--gold);text-decoration:none;">REGÍSTRATE</a></p></div></body></html>')
+    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:320px;text-align:center;border-top:4px solid var(--gold);"><h2>🦁 QUICK MONEY</h2><form method="POST" action="/auth"><input name="u" placeholder="USUARIO" required><input type="password" name="p" placeholder="PASS" required><button class="btn btn-verify" style="width:100%;">INGRESAR AL TRONO</button></form><p style="font-size:11px;margin-top:15px;">¿No tienes cuenta? <a href="/register" style="color:var(--gold);text-decoration:none;">REGÍSTRATE AQUÍ</a></p></div></body></html>')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -43,7 +44,7 @@ def register():
         if u and p and u not in DB["usuarios"]:
             DB["usuarios"][u] = {"pass": p, "saldo": 0.0, "rango": "VIP"}
             return redirect(url_for('login'))
-    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:320px;text-align:center;"><h2>📝 REGISTRO</h2><form method="POST"><input name="u" placeholder="USUARIO" required><input type="password" name="p" placeholder="PASS" required><button class="btn btn-verify" style="margin-top:10px;">CREAR CUENTA</button></form></div></body></html>')
+    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:320px;text-align:center;"><h2>📝 REGISTRO QM</h2><form method="POST"><input name="u" placeholder="CREAR USUARIO" required><input type="password" name="p" placeholder="CREAR PASS" required><button class="btn btn-verify" style="width:100%;">CREAR CUENTA</button></form></div></body></html>')
 
 @app.route('/auth', methods=['POST'])
 def auth():
@@ -56,10 +57,12 @@ def auth():
 def panel():
     if 'user' not in session: return redirect(url_for('login'))
     u_data = DB["usuarios"][session['user']]
+    
     gen_res = ""
     if request.method == 'POST' and 'bin' in request.form:
         bin_val = request.form.get('bin')[:6]
-        cards = [f"{bin_val}{''.join([str(random.randint(0,9)) for _ in range(10)])}|{random.randint(1,12):02d}|{random.randint(26,30)}|{random.randint(100,999)}" for _ in range(int(request.form.get('cant', 10)))]
+        cant = int(request.form.get('cant', 10))
+        cards = [f"{bin_val}{''.join([str(random.randint(0,9)) for _ in range(10)])}|{random.randint(1,12):02d}|{random.randint(26,30)}|{random.randint(100,999)}" for _ in range(cant)]
         gen_res = "\n".join(cards)
 
     return render_template_string(f"""
@@ -76,7 +79,7 @@ def panel():
             <form method="POST">
                 <input name="bin" placeholder="BIN 473702" value="{request.form.get('bin', '')}">
                 <input name="cant" type="number" value="10">
-                <button type="submit" class="btn btn-gen">🪄 GENERAR</button>
+                <button type="submit" class="btn" style="background:#232730; color:#fff;">🪄 GENERAR</button>
                 <textarea id="gen_area" rows="4" readonly style="color:var(--gold);">{gen_res}</textarea>
                 <button type="button" class="btn" style="background:#7a632d;color:#ffeb3b" onclick="document.getElementById('check_list').value += document.getElementById('gen_area').value + '\\n'">➕ CARGAR AL VALIDADOR</button>
             </form>
@@ -87,40 +90,59 @@ def panel():
             <input id="amazon_cookie" placeholder="Paste Amazon Session Cookie...">
             <textarea id="check_list" rows="6" placeholder="LISTA CC|MM|YY|CVV"></textarea>
             <button class="btn btn-verify" onclick="startChecking()">🚀 INICIAR VALIDACIÓN ($0.35/LIVE)</button>
-            <button class="btn btn-clean" onclick="clearAll()">🗑️ LIMPIAR TODO</button>
+            <div style="display:flex; gap:10px;">
+                <button class="btn btn-clean" style="flex:1;" onclick="clearAll()">🗑️ LIMPIAR</button>
+                <button class="btn btn-download" style="flex:1;" onclick="downloadLives()">📥 DESCARGAR LIVES</button>
+            </div>
         </div>
 
         <div class="card res-box live"><span class="card-h">LIVES ✅</span><div id="lives_log"></div></div>
         <div class="card res-box dead"><span class="card-h">DEAD ❌</span><div id="dead_log"></div></div>
 
-        { f'<a href="/admin" class="btn" style="border:1px solid var(--gold); color:var(--gold); text-decoration:none; display:block; text-align:center; margin-top:10px;">⚙️ PANEL ADMIN</a>' if u_data['rango'] == 'OWNER' else '' }
+        { f'<a href="/admin" class="btn" style="border:1px solid var(--gold); color:var(--gold); text-decoration:none; display:block; text-align:center; margin-top:10px;">⚙️ PANEL DE CONTROL (MASTER)</a>' if u_data['rango'] == 'OWNER' else '' }
+        
+        <button class="btn btn-logout" onclick="location.href='/logout'">🚪 CERRAR SESIÓN</button>
     </div>
 
     <script>
+    let livesArray = [];
+
     function clearAll() {{
         document.getElementById('amazon_cookie').value = '';
         document.getElementById('check_list').value = '';
         document.getElementById('lives_log').innerHTML = '';
         document.getElementById('dead_log').innerHTML = '';
-        alert('Panel Limpio');
+        livesArray = [];
+    }}
+
+    function downloadLives() {{
+        if (livesArray.length === 0) return alert('No hay tarjetas LIVE para descargar.');
+        const blob = new Blob([livesArray.join('\\n')], {{ type: 'text/plain' }});
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'lives_mairo_checker.txt';
+        a.click();
     }}
 
     async function startChecking() {{
         let area = document.getElementById('check_list');
         let lines = area.value.trim().split('\\n');
-        if (!lines[0] || lines[0] === "") return alert('Lista vacía');
+        if (!lines[0] || lines[0] === "") return alert('La lista está vacía.');
 
         while (lines.length > 0) {{
             let currentCC = lines.shift(); 
             area.value = lines.join('\\n'); 
 
             let isLive = Math.random() > 0.8; 
+            
             if (isLive) {{
                 let res = await fetch('/cobrar_live', {{ method: 'POST' }});
                 let data = await res.json();
                 if (data.error) {{ alert(data.error); break; }}
                 document.getElementById('display_saldo').innerText = 'SALDO: $' + data.nuevo_saldo.toFixed(2);
                 document.getElementById('lives_log').innerHTML = currentCC + ' -> [LIVE ✅] <br>' + document.getElementById('lives_log').innerHTML;
+                livesArray.push(currentCC);
             }} else {{
                 document.getElementById('dead_log').innerHTML = currentCC + ' -> [DEAD ❌] <br>' + document.getElementById('dead_log').innerHTML;
             }}
@@ -146,7 +168,7 @@ def admin():
         target = request.form.get('u_target')
         amount = float(request.form.get('amount', 0))
         if target in DB["usuarios"]: DB["usuarios"][target]['saldo'] += amount
-    return render_template_string(f'<html><head>{CSS}</head><body><div class="container"><div class="card"><h2>⚙️ RECARGAR SALDO</h2><form method="POST"><select name="u_target">{" ".join([f"<option value='{u}'>{u} (${DB['usuarios'][u]['saldo']})</option>" for u in DB["usuarios"]])}</select><input type="number" step="0.01" name="amount" placeholder="Cargar $"><button class="btn btn-verify">CARGAR</button></form><br><a href="/panel" style="color:var(--gold); text-decoration:none;">← Volver</a></div></div></body></html>')
+    return render_template_string(f'<html><head>{CSS}</head><body><div class="container" style="margin-top:50px;"><div class="card"><h2>⚙️ GESTIÓN DE SALDO</h2><form method="POST"><select name="u_target">{" ".join([f"<option value='{u}'>{u} (${DB['usuarios'][u]['saldo']})</option>" for u in DB["usuarios"]])}</select><input type="number" step="0.01" name="amount" placeholder="Cargar $"><button class="btn btn-verify">CARGAR SALDO</button></form><br><a href="/panel" style="color:var(--gold); text-decoration:none;">← Volver</a></div></div></body></html>')
 
 @app.route('/logout')
 def logout():
