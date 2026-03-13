@@ -3,28 +3,23 @@ from flask import Flask, render_template_string, request, redirect, session, url
 from pymongo import MongoClient
 
 app = Flask(__name__)
-app.secret_key = 'quick_money_v31_final_cloud'
+app.secret_key = 'quick_money_v31_1_dynamic_id'
 
 # --- TU CONEXIÓN A MONGODB ATLAS ---
-# Pon tu contraseña real aquí:
 MONGO_URI = "mongodb+srv://mairo:mairo1212@cluster0.inuth4k.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
 try:
     client = MongoClient(MONGO_URI)
     db_mongo = client['quickmoney_db']
     usuarios_col = db_mongo['usuarios']
-    # Verificar conexión
     client.admin.command('ping')
     print("Conexión Exitosa a MongoDB")
 except Exception as e:
     print(f"Error de conexión: {e}")
 
-# Crear admin por defecto en la nube
-if not usuarios_col.find_one({"u": "mairo"}):
-    usuarios_col.insert_one({"u": "mairo", "p": "1234", "saldo": 999999.0, "rango": "OWNER", "telegram": "@mairo"})
-
 COSTO_LIVE = 0.15
 
+# --- MOTOR DE BINS ---
 def get_full_bin_info(cc):
     b = cc[:6]
     if b.startswith(('414740', '4737', '4013', '4226', '4365', '4852', '4120')): return "JPMORGAN CHASE BANK N.A. | UNITED STATES 🇺🇸"
@@ -86,12 +81,17 @@ def register():
         else:
             usuarios_col.insert_one({"u": u, "p": p, "saldo": 0.0, "rango": "USER", "telegram": t})
             return redirect(url_for('login'))
-    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><canvas id="bg-canvas"></canvas><div class="auth-card"><h2>REGISTRO</h2>{{% if error %}}<p style="color:var(--red)">{{{{error}}}}</p>{{% endif %}}<form method="POST"><input name="u" placeholder="USUARIO" required><input type="password" name="p" placeholder="PASS" required><input name="t" placeholder="TELEGRAM @ID" required><button class="btn btn-gold">CREAR CUENTA</button></form></div>{CANVAS_SCRIPT}</body></html>', error=error)
+    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><canvas id="bg-canvas"></canvas><div class="auth-card"><h2>REGISTRO</h2>{{% if error %}}<p style="color:var(--red)">{{{{error}}}}</p>{{% endif %}}<form method="POST"><input name="u" placeholder="USUARIO" required><input type="password" name="p" placeholder="PASS" required><input name="t" placeholder="TELEGRAM @ID" required><button class="btn btn-gold">CREAR CUENTA</button></form><a href="/" style="color:#555; font-size:11px;">VOLVER</a></div>{CANVAS_SCRIPT}</body></html>', error=error)
 
 @app.route('/panel', methods=['GET', 'POST'])
 def panel():
     if 'user' not in session: return redirect(url_for('login'))
-    u_data = usuarios_col.find_one({"u": session['user']})
+    u_name = session['user']
+    u_data = usuarios_col.find_one({"u": u_name})
+    
+    # Lógica para mostrar ADMIN o el nombre del cliente
+    display_id = "ADMIN" if u_name.lower() == "mairo" else u_name.upper()
+
     gen_res = ""
     if request.method == 'POST' and 'bin' in request.form:
         raw_bin = request.form.get('bin', '').replace(' ', '')
@@ -109,7 +109,7 @@ def panel():
     <audio id="live_sound" src="https://www.soundjay.com/misc/sounds/cash-register-purchase-1.mp3"></audio>
     <div class="container">
         <div style="display:flex; justify-content:space-between; align-items:center; margin: 30px 0;">
-            <div style="font-size:11px;">ID: <b style="color:var(--gold)">ADMIN</b></div>
+            <div style="font-size:11px;">ID: <b style="color:var(--gold)">{display_id}</b></div>
             <div id="display_saldo" style="background:rgba(197,160,89,0.1); border:1px solid var(--gold); padding:8px 15px; border-radius:2px; color:var(--gold); font-weight:bold;">${u_data['saldo']:.2f}</div>
         </div>
         <div class="card"><span class="card-h">🪄 GENERADOR ELITE</span>
