@@ -2,7 +2,7 @@ import os, random, time, json
 from flask import Flask, render_template_string, request, redirect, session, url_for, jsonify
 
 app = Flask(__name__)
-app.secret_key = 'mairo_v22_houdini_final_boss'
+app.secret_key = 'mairo_v22_1_houdini_storm_boss'
 
 # --- BASE DE DATOS LOCAL (Volátil, pero funcional para diseño) ---
 DB_FILE = 'database.json'
@@ -19,7 +19,7 @@ COSTO_LIVE = 0.35
 CSS = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@800&display=swap'); /* Para el logo 3D */
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800&display=swap'); /* Para el logo 3D */
 
     :root { --gold: #c5a059; --bg: #000; --card: rgba(8, 8, 10, 0.95); --border: #1a1a1e; --green: #2ecc71; --red: #ff4757; }
     
@@ -36,16 +36,16 @@ CSS = """
     /* LOGO HOUDINI REPARADO */
     .houdini-logo { width: 90px; height: 90px; border-radius: 50%; border: 2px solid var(--gold); padding: 5px; background: #000; margin-bottom: 25px; box-shadow: 0 0 20px rgba(197, 160, 89, 0.3); }
     
-    /* LOGO "QUICK MONEY" 3D & PROFESIONAL */
+    /* LOGO "QUICK MONEY" TORMENTA EDICIÓN */
     .qm-brand-3d { 
         font-family: 'Montserrat', sans-serif; 
-        font-size: 32px; 
+        font-size: 28px; /* Un poco menos grande para que quepan los emojis */
         font-weight: 800; 
         color: #fff; 
         letter-spacing: -1.5px; 
         margin-bottom: 30px; 
         display: block; 
-        text-shadow: 2px 2px 0px var(--gold), 3px 3px 0px #888, 4px 4px 0px #333; /* Efecto 3D */
+        text-shadow: 1px 1px 0px var(--gold), 2px 2px 0px #888, 3px 3px 0px #333; /* Efecto 3D menos intenso */
     }
 
     /* DASHBOARD ELEMENTS */
@@ -90,7 +90,7 @@ CANVAS_SCRIPT = """
 
 @app.route('/')
 def login():
-    if 'user' in session: return redirect(url_for('panel'))
+    if 'user' in session: return redirect(url_for('dashboard'))
     return render_template_string(f"""
     <html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head>
     <body style="display:flex;align-items:center;justify-content:center;height:100vh;">
@@ -98,7 +98,7 @@ def login():
     <div class="auth-card">
         <img src="https://raw.githubusercontent.com/C4H-Houdini/houdini-checker/master/houdini-logo.png" class="houdini-logo">
         
-        <div class="qm-brand-3d">QUICK MONEY</div>
+        <div class="qm-brand-3d">⚡️🌩️ QUICK MONEY 🌩️⚡️</div>
         
         <form method="POST" action="/auth">
             <input name="u" placeholder="USUARIO" required autocomplete="off">
@@ -146,8 +146,8 @@ def register():
     </body></html>
     """, error=error)
 
-@app.route('/panel', methods=['GET', 'POST'])
-def panel():
+@app.route('/dashboard')
+def dashboard():
     if 'user' not in session: return redirect(url_for('login'))
     db = load_db()
     u_data = db["usuarios"][session['user']]
@@ -236,7 +236,7 @@ def auth():
     u, p = request.form.get('u'), request.form.get('p')
     db = load_db()
     if u in db["usuarios"] and db["usuarios"][u]['pass'] == p: session['user'] = u
-    return redirect(url_for('panel'))
+    return redirect(url_for('dashboard'))
 
 @app.route('/validar_card', methods=['POST'])
 def validar():
@@ -261,7 +261,7 @@ def admin():
         if target in db["usuarios"]:
             db["usuarios"][target]['saldo'] += amount
             save_db(db)
-    return render_template_string(f'<html><head>{CSS}</head><body style="padding:50px;"><div class="container card"><h2>⚙️ RECARGAR SALDO</h2><form method="POST"><select name="u_target">{" ".join([f"<option value='{u}'>{u} (${{db['usuarios'][u]['saldo']}}) - TG: {{db['usuarios'][u].get('telegram', 'N/A')}}</option>" for u in db["usuarios"]])}</select><br><br><input type="number" step="0.1" name="amount" placeholder="CANTIDAD A SUMAR" required><button class="btn btn-gold">APLICAR CARGA</button></form><br><a href="/panel" style="color:var(--gold); text-decoration:none;">← Volver</a></div></div></body></html>')
+    return render_template_string(f'<html><head>{CSS}</head><body style="padding:50px;"><div class="container card"><h2>⚙️ RECARGAR SALDO</h2><form method="POST"><select name="u_target">{" ".join([f"<option value='{u}'>{u} (${{db['usuarios'][u]['saldo']}}) - TG: {{db['usuarios'][u].get('telegram', 'N/A')}}</option>" for u in db["usuarios"]])}</select><br><br><input type="number" step="0.1" name="amount" placeholder="CANTIDAD A SUMAR" required><button class="btn btn-gold">APLICAR CARGA</button></form><br><a href="/dashboard" style="color:var(--gold); text-decoration:none;">← Volver</a></div></div></body></html>')
 
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))
