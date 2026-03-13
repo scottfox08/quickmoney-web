@@ -2,7 +2,7 @@ import os, random, time, json
 from flask import Flask, render_template_string, request, redirect, session, url_for, jsonify
 
 app = Flask(__name__)
-app.secret_key = 'quick_money_v28_1_global_final'
+app.secret_key = 'quick_money_v29_final_solution'
 
 # --- BASE DE DATOS LOCAL ---
 DB_FILE = 'database.json'
@@ -19,31 +19,22 @@ COSTO_LIVE = 0.15
 # --- MOTOR DE INTELIGENCIA DE BINS GLOBAL ---
 def get_full_bin_info(cc):
     b = cc[:6]
-    # USA - JPMorgan Chase
     if b.startswith(('414740', '4737', '4013', '4226', '4365', '4852', '4120')):
         return "JPMORGAN CHASE BANK N.A. | UNITED STATES 🇺🇸"
-    # USA - Bank of America
     elif b.startswith(('4802', '4400', '4444', '4000', '4026', '4147', '4266')):
         return "BANK OF AMERICA N.A. | UNITED STATES 🇺🇸"
-    # USA - Wells Fargo
     elif b.startswith(('5312', '5434', '4343', '4615', '5166', '4736')):
         return "WELLS FARGO BANK N.A. | UNITED STATES 🇺🇸"
-    # USA - Capital One
     elif b.startswith(('5178', '5456', '5491', '4003', '5528')):
         return "CAPITAL ONE BANK | UNITED STATES 🇺🇸"
-    # DOM - Banreservas
     elif b.startswith(('4539', '4342', '4031', '4052')):
         return "BANRESERVAS | DOMINICAN REPUBLIC 🇩🇴"
-    # DOM - Banco Popular
     elif b.startswith(('4152', '4015', '4214', '5498')):
         return "BANCO POPULAR | DOMINICAN REPUBLIC 🇩🇴"
-    # DOM - BHD
     elif b.startswith(('4913', '4213', '5230', '5160')):
         return "BANCO BHD | DOMINICAN REPUBLIC 🇩🇴"
-    # DEFAULT INTELIGENTE
     else:
-        brand = "VISA CLASSIC" if b.startswith('4') else "MASTERCARD PLATINUM"
-        return f"{brand} INTERNATIONAL | UNITED STATES 🇺🇸"
+        return "VISA/MC INTERNATIONAL | UNITED STATES 🇺🇸"
 
 CSS = """
 <style>
@@ -106,9 +97,21 @@ def panel():
     u_data = db["usuarios"][session['user']]
     gen_res = ""
     if request.method == 'POST' and 'bin' in request.form:
-        bin_v = request.form.get('bin', '').split('|')[0][:6]
-        cards = [f"{bin_v}{''.join([str(random.randint(0,9)) for _ in range(16-len(bin_v))])}|{random.randint(1,12):02d}|{random.randint(26,30)}|{''.join([str(random.randint(0,9)) for _ in range(3)])}" for _ in range(int(request.form.get('cant', 10)))]
+        raw_bin = request.form.get('bin', '').replace(' ', '')
+        # Separar BIN de fecha si existe (formato BIN|MM|YYYY)
+        parts = raw_bin.split('|')
+        bin_base = parts[0]
+        # Generar respetando el BIN ingresado
+        cards = []
+        for _ in range(int(request.form.get('cant', 10))):
+            cc = bin_base
+            while len(cc) < 16: cc += str(random.randint(0, 9))
+            mm = parts[1] if len(parts) > 1 else f"{random.randint(1, 12):02d}"
+            yy = parts[2] if len(parts) > 2 else str(random.randint(2026, 2031))
+            cvv = "".join([str(random.randint(0, 9)) for _ in range(3)])
+            cards.append(f"{cc}|{mm}|{yy}|{cvv}")
         gen_res = "\\n".join(cards)
+    
     return render_template_string(f"""
     <html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head>
     <body><canvas id="bg-canvas"></canvas>
@@ -119,15 +122,21 @@ def panel():
             <div id="display_saldo" style="background:rgba(197,160,89,0.1); border:1px solid var(--gold); padding:10px 20px; border-radius:2px; color:var(--gold); font-weight:bold;">${u_data['saldo']:.2f}</div>
         </div>
         <div class="card"><span class="card-h">🪄 GENERADOR ELITE</span>
-            <form method="POST"><input name="bin" placeholder="BIN (458012)" value="{request.form.get('bin', '')}"><input name="cant" type="number" value="10" style="width:70px;"><button type="submit" class="btn btn-dark">🪄 GENERAR</button>
+            <form method="POST">
+                <input name="bin" placeholder="BIN|MM|YYYY (Ej: 531260|10|2030)" value="{request.form.get('bin', '')}">
+                <input name="cant" type="number" value="10" style="width:70px;">
+                <button type="submit" class="btn btn-dark">🪄 GENERAR</button>
                 <textarea id="gen_area" rows="6" readonly style="margin-top:10px; color:var(--gold);">{gen_res}</textarea>
-                <button type="button" class="btn btn-dark" style="color:var(--gold)" onclick="cargarAlValidator()">➕ CARGAR AL VALIDADOR</button></form>
+                <button type="button" class="btn btn-dark" style="color:var(--gold)" onclick="cargarAlValidator()">➕ CARGAR AL VALIDADOR</button>
+            </form>
         </div>
-        <div class="card"><span class="card-h">🛡️ GATE AMAZON V21</span>
+        <div class="card"><span class="card-h">🛡️ VALIDADOR SUPREMO</span>
             <textarea id="check_list" rows="6" placeholder="LISTA CC|MM|YY|CVV"></textarea>
             <button class="btn btn-gold" id="btn_start" onclick="startChecking()">🚀 INICIAR CHECK ($0.15/LIVE)</button>
-            <div style="display:flex; gap:10px; margin-top:10px;"><button class="btn btn-dark" style="flex:1" onclick="document.getElementById('check_list').value = ''">🗑️ LIMPIAR</button>
-                <button class="btn btn-dark" style="flex:1; color:var(--green)" onclick="downloadLives()">📥 DESCARGAR LIVES</button></div>
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <button class="btn btn-dark" style="flex:1" onclick="document.getElementById('check_list').value = ''">🗑️ LIMPIAR</button>
+                <button class="btn btn-dark" style="flex:1; color:var(--green)" onclick="downloadLives()">📥 DESCARGAR LIVES</button>
+            </div>
         </div>
         <span style="color:var(--green); font-size:10px; font-weight:bold;">APROBADAS ✅</span><div class="res-box" id="lives_log"></div>
         <span style="color:var(--red); font-size:10px; font-weight:bold; margin-top:15px; display:block;">RECHAZADAS ❌</span><div class="res-box" id="dead_log" style="opacity:0.5; min-height:80px;"></div>
