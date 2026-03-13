@@ -2,7 +2,7 @@ import os, random, time, json
 from flask import Flask, render_template_string, request, redirect, session, url_for, jsonify
 
 app = Flask(__name__)
-app.secret_key = 'mairo_v25_telegram_blindado'
+app.secret_key = 'mairo_v25_1_clean_list_supreme'
 
 # --- BASE DE DATOS LOCAL ---
 DB_FILE = 'database.json'
@@ -16,7 +16,6 @@ def save_db(data):
 
 COSTO_LIVE = 0.35
 
-# --- DETECCIÓN DE BANCO Y PAÍS ---
 def get_bin_info(cc):
     bin_6 = cc[:6]
     bancos = ["CHASE", "BOFA", "WELLS FARGO", "CITI", "CAPITAL ONE", "BHD", "RESERVAS", "POPULAR"]
@@ -83,24 +82,8 @@ def register():
         elif u in db["usuarios"]: error = "USUARIO NO DISPONIBLE"
         else:
             db["usuarios"][u] = {"pass": p, "saldo": 0.0, "rango": "USER", "telegram": t}
-            save_db(db)
-            return redirect(url_for('login'))
-    return render_template_string(f"""
-    <html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head>
-    <body style="display:flex;align-items:center;justify-content:center;height:100vh;">
-    <div class="auth-card">
-        <h2 style="color:var(--gold)">REGISTRO SUPREMO</h2>
-        {{% if error %}}<p style="color:var(--red); font-size:12px;">{{{{error}}}}</p>{{% endif %}}
-        <form method="POST">
-            <input name="u" placeholder="USUARIO" required>
-            <input type="password" name="p" placeholder="CONTRASEÑA" required>
-            <input name="t" placeholder="TELEGRAM ID (EJ: @MAIRO)" required>
-            <button class="btn btn-gold">CREAR CUENTA</button>
-        </form>
-        <a href="/" style="color:#555; text-decoration:none; font-size:11px;">VOLVER AL LOGIN</a>
-    </div>
-    </body></html>
-    """, error=error)
+            save_db(db); return redirect(url_for('login'))
+    return render_template_string(f'<html><head>{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="auth-card"><h2>REGISTRO</h2>{{% if error %}}<p style="color:var(--red)">{{{{error}}}}</p>{{% endif %}}<form method="POST"><input name="u" placeholder="USUARIO" required><input type="password" name="p" placeholder="PASS" required><input name="t" placeholder="TELEGRAM @ID" required><button class="btn btn-gold">CREAR CUENTA</button></form><a href="/" style="color:#555; font-size:11px;">VOLVER</a></div></body></html>', error=error)
 
 @app.route('/panel', methods=['GET', 'POST'])
 def panel():
@@ -110,8 +93,9 @@ def panel():
     gen_res = ""
     if request.method == 'POST' and 'bin' in request.form:
         bin_v = request.form.get('bin', '').split('|')[0][:6]
-        cards_list = [f"{bin_v}{''.join([str(random.randint(0,9)) for _ in range(16-len(bin_v))])}|{random.randint(1,12):02d}|{random.randint(26,30)}|{''.join([str(random.randint(0,9)) for _ in range(3)])}" for _ in range(int(request.form.get('cant', 10)))]
-        gen_res = "\\n".join(cards_list)
+        cards = [f"{bin_v}{''.join([str(random.randint(0,9)) for _ in range(16-len(bin_v))])}|{random.randint(1,12):02d}|{random.randint(26,30)}|{''.join([str(random.randint(0,9)) for _ in range(3)])}" for _ in range(int(request.form.get('cant', 10)))]
+        # Enviamos la lista con saltos de línea claros
+        gen_res = "\\n".join(cards)
 
     return render_template_string(f"""
     <html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head>
@@ -130,7 +114,7 @@ def panel():
                 <input name="cant" type="number" value="10" style="width:75px;">
                 <button type="submit" class="btn btn-dark">🪄 GENERAR TARJETAS</button>
                 <textarea id="gen_area" rows="6" readonly style="margin-top:10px; color:var(--gold); font-size:12px; line-height:1.5;">{gen_res}</textarea>
-                <button type="button" class="btn btn-dark" style="color:var(--gold); border: 1px solid var(--gold);" onclick="document.getElementById('check_list').value += document.getElementById('gen_area').value + '\\n'">➕ CARGAR AL VALIDADOR</button>
+                <button type="button" class="btn btn-dark" style="color:var(--gold); border: 1px solid var(--gold);" onclick="cargarAlValidator()">➕ CARGAR AL VALIDADOR</button>
             </form>
         </div>
 
@@ -152,10 +136,24 @@ def panel():
         <div class="res-box" style="border-left:3px solid var(--red); opacity:0.6;"><div id="dead_log"></div></div>
         
         { f'<a href="/admin" class="btn btn-dark" style="color:var(--gold); text-decoration:none; display:block; text-align:center; margin-top:20px; border:1px solid var(--gold);">⚙️ ADMIN PANEL</a>' if u_data['rango'] == 'OWNER' else '' }
-        <a href="/logout" style="color:#444; text-decoration:none; display:block; text-align:center; margin-top:20px; font-size:10px;">CERRAR SESIÓN SEGURO</a>
+        <a href="/logout" style="color:#444; text-decoration:none; display:block; text-align:center; margin-top:20px; font-size:10px;">CERRAR SESIÓN</a>
     </div>
 
     <script>
+    // FIX PARA LIMPIAR LOS SALTOS DE LINEA AL CARGAR
+    window.onload = function() {{
+        let area = document.getElementById('gen_area');
+        if(area.value) {{
+            area.value = area.value.replace(/\\\\n/g, '\\n');
+        }}
+    }};
+
+    function cargarAlValidator() {{
+        let gen = document.getElementById('gen_area').value;
+        let check = document.getElementById('check_list');
+        check.value += gen.replace(/\\\\n/g, '\\n') + '\\n';
+    }}
+
     let livesArray = [];
     async function startChecking() {{
         let area = document.getElementById('check_list');
@@ -216,7 +214,7 @@ def admin():
     if request.method == 'POST':
         db["usuarios"][request.form.get('u_target')]['saldo'] += float(request.form.get('amount'))
         save_db(db)
-    return render_template_string(f'<html><head>{CSS}</head><body style="padding:50px;"><div class="card"><h2>RECARGAR CLIENTE</h2><form method="POST"><select name="u_target" style="width:100%; padding:15px; background:#000; color:#fff; border:1px solid #333;">{" ".join([f"<option value='{u}'>{u} (${{db['usuarios'][u]['saldo']}}) - TG: {{db['usuarios'][u].get('telegram', 'N/A')}}</option>" for u in db["usuarios"]])}</select><br><br><input type="number" step="0.1" name="amount" placeholder="CANTIDAD" required><button class="btn btn-gold">APLICAR RECARGA</button></form><br><a href="/panel" style="color:var(--gold); text-decoration:none;">← VOLVER AL PANEL</a></div></body></html>')
+    return render_template_string(f'<html><head>{CSS}</head><body style="padding:50px;"><div class="card"><h2>ADMIN RECARGA</h2><form method="POST"><select name="u_target" style="width:100%; padding:15px; background:#000; color:#fff; border:1px solid #333;">{" ".join([f"<option value='{u}'>{u} (${{db['usuarios'][u]['saldo']}}) - TG: {{db['usuarios'][u].get('telegram', 'N/A')}}</option>" for u in db["usuarios"]])}</select><br><br><input type="number" step="0.1" name="amount" placeholder="CANTIDAD" required><button class="btn btn-gold">CARGAR</button></form><br><a href="/panel" style="color:var(--gold); text-decoration:none;">← PANEL</a></div></body></html>')
 
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))
