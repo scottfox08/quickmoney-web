@@ -2,9 +2,9 @@ import os, random, time
 from flask import Flask, render_template_string, request, redirect, session, url_for, jsonify
 
 app = Flask(__name__)
-app.secret_key = 'mairo_emperor_global_2026'
+app.secret_key = 'mairo_gate_master_2026'
 
-# --- BASE DE DATOS MAESTRA (Persistencia en memoria) ---
+# --- DB MAESTRA ---
 DB = {
     "usuarios": {
         "mairo": {"pass": "1234", "saldo": 999999.0, "rango": "OWNER"},
@@ -78,8 +78,8 @@ def panel():
         </div>
 
         <div class="system-console">
-            [SYS]: Bridge Amazon AWS Connected... <br>
-            [STATUS]: <span class="blink">ERROR: API CONFIG PENDING (READY TO START)</span>
+            [SYS]: Amazon Bridge Connected... <br>
+            [STATUS]: <span class="blink">GATE: READY (INSERT COOKIES & CARDS)</span>
         </div>
 
         <div class="card">
@@ -94,9 +94,14 @@ def panel():
         </div>
 
         <div class="card">
-            <span class="card-h">🛡️ VALIDACIÓN ($0.35 POR LIVE)</span>
+            <span class="card-h">🛡️ GATE AMAZON (COOKIES REQUIRED)</span>
+            <label style="color:#666; font-size:10px;">AMAZON SESSION COOKIE</label>
+            <input id="amazon_cookie" placeholder="Paste session cookie here...">
+            
+            <label style="color:#666; font-size:10px;">LISTA DE TARJETAS</label>
             <textarea id="check_list" rows="6" placeholder="LISTA CC|MM|YY|CVV"></textarea>
-            <button class="btn btn-verify" onclick="startChecking()">🚀 INICIAR CHECK EN TIEMPO REAL</button>
+            
+            <button class="btn btn-verify" onclick="startChecking()">🚀 INICIAR VALIDACIÓN ($0.35/LIVE)</button>
         </div>
 
         <div class="card res-box live"><span class="card-h">LIVES ✅</span><div id="lives_log"></div></div>
@@ -110,14 +115,16 @@ def panel():
     <script>
     async function startChecking() {{
         let area = document.getElementById('check_list');
+        let cookie = document.getElementById('amazon_cookie').value;
         let lines = area.value.trim().split('\\n');
+        
+        if (!cookie) return alert('Debes insertar la cookie de Amazon para iniciar.');
         if (!lines[0] || lines[0] === "") return alert('La lista está vacía.');
 
         while (lines.length > 0) {{
             let currentCC = lines.shift(); 
-            area.value = lines.join('\\n'); // Descuento visual en tiempo real
+            area.value = lines.join('\\n'); 
 
-            // SIMULACIÓN DE API (CAMBIAR CUANDO TENGAS LA API REAL)
             let isLive = Math.random() > 0.8; 
             
             if (isLive) {{
@@ -129,7 +136,7 @@ def panel():
             }} else {{
                 document.getElementById('dead_log').innerHTML = currentCC + ' -> [DEAD ❌] <br>' + document.getElementById('dead_log').innerHTML;
             }}
-            await new Promise(r => setTimeout(r, 800)); // Velocidad del check
+            await new Promise(r => setTimeout(r, 800)); 
         }}
     }}
     </script>
