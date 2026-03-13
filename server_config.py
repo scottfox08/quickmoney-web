@@ -2,7 +2,7 @@ import os, random, time, json
 from flask import Flask, render_template_string, request, redirect, session, url_for, jsonify
 
 app = Flask(__name__)
-app.secret_key = 'quick_money_v24_1_analytics'
+app.secret_key = 'mairo_v25_telegram_blindado'
 
 # --- BASE DE DATOS LOCAL ---
 DB_FILE = 'database.json'
@@ -16,11 +16,10 @@ def save_db(data):
 
 COSTO_LIVE = 0.35
 
-# --- MINI DB DE BINS (Para País y Banco) ---
-def get_bin_info(cc_number):
-    bin_6 = cc_number[:6]
-    # Simulación de detección (Esto se puede ampliar con una API de BINs)
-    bancos = ["CHASE", "BANK OF AMERICA", "WELLS FARGO", "CITIBANK", "CAPITAL ONE", "BHD", "RESERVAS", "POPULAR"]
+# --- DETECCIÓN DE BANCO Y PAÍS ---
+def get_bin_info(cc):
+    bin_6 = cc[:6]
+    bancos = ["CHASE", "BOFA", "WELLS FARGO", "CITI", "CAPITAL ONE", "BHD", "RESERVAS", "POPULAR"]
     paises = ["USA", "USA", "USA", "USA", "USA", "DOM", "DOM", "DOM"]
     idx = int(bin_6) % len(bancos)
     return f"{paises[idx]} | {bancos[idx]}"
@@ -32,9 +31,9 @@ CSS = """
     body { background: var(--bg); color: #fff; font-family: 'JetBrains Mono', monospace; margin: 0; padding: 10px; min-height: 100vh; overflow-x: hidden; }
     #bg-canvas { position: fixed; top:0; left:0; width:100%; height:100%; z-index: -1; opacity: 0.5; }
     .container { max-width: 500px; margin: auto; padding-bottom: 50px; position: relative; }
-    .auth-card { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 35px; width: 360px; text-align: center; border-top: 3px solid var(--gold); }
-    .houdini-frame { width: 110px; height: 110px; border-radius: 50%; border: 2px solid var(--gold); margin: 0 auto 25px; background: url('https://i.ibb.co/2Z5pCtf/houdini-main.png') center/cover; box-shadow: 0 0 25px rgba(197, 160, 89, 0.4); }
-    .qm-title { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 30px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .auth-card { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 35px; width: 340px; text-align: center; border-top: 3px solid var(--gold); }
+    .houdini-frame { width: 110px; height: 110px; border-radius: 50%; border: 2px solid var(--gold); margin: 0 auto 25px; background: url('https://i.postimg.cc/85zXp9XN/houdini-logo.png') center/cover; box-shadow: 0 0 25px rgba(197, 160, 89, 0.4); }
+    .qm-title { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 30px; display: flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 20px; margin-bottom: 15px; }
     .card-h { font-size: 11px; color: var(--gold); text-transform: uppercase; font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; display: block; }
     input, textarea { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 16px; border-radius: 2px; margin-bottom: 12px; box-sizing: border-box; font-family: inherit; font-size: 13px; outline: none; }
@@ -56,9 +55,13 @@ def login():
         <div class="houdini-frame"></div>
         <div class="qm-title">⚡️ 🌩️ QUICK MONEY 🌩️ ⚡️</div>
         <form method="POST" action="/auth">
-            <input name="u" placeholder="USUARIO" required><input type="password" name="p" placeholder="PASS" required>
+            <input name="u" placeholder="USUARIO" required autocomplete="off">
+            <input type="password" name="p" placeholder="PASS" required>
             <button class="btn btn-gold">[ INGRESAR ]</button>
         </form>
+        <div style="margin-top:20px; font-size:11px;">
+            ¿NUEVO AQUÍ? <a href="/register" style="color:var(--gold); text-decoration:none; font-weight:bold;">REGÍSTRATE</a>
+        </div>
     </div>
     <script>
         const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getContext('2d');
@@ -70,6 +73,35 @@ def login():
     </body></html>
     """)
 
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    error = None
+    if request.method == 'POST':
+        u, p, t = request.form.get('u'), request.form.get('p'), request.form.get('t')
+        db = load_db()
+        if not t.startswith('@'): error = "EL ID DE TELEGRAM DEBE EMPEZAR CON @"
+        elif u in db["usuarios"]: error = "USUARIO NO DISPONIBLE"
+        else:
+            db["usuarios"][u] = {"pass": p, "saldo": 0.0, "rango": "USER", "telegram": t}
+            save_db(db)
+            return redirect(url_for('login'))
+    return render_template_string(f"""
+    <html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head>
+    <body style="display:flex;align-items:center;justify-content:center;height:100vh;">
+    <div class="auth-card">
+        <h2 style="color:var(--gold)">REGISTRO SUPREMO</h2>
+        {{% if error %}}<p style="color:var(--red); font-size:12px;">{{{{error}}}}</p>{{% endif %}}
+        <form method="POST">
+            <input name="u" placeholder="USUARIO" required>
+            <input type="password" name="p" placeholder="CONTRASEÑA" required>
+            <input name="t" placeholder="TELEGRAM ID (EJ: @MAIRO)" required>
+            <button class="btn btn-gold">CREAR CUENTA</button>
+        </form>
+        <a href="/" style="color:#555; text-decoration:none; font-size:11px;">VOLVER AL LOGIN</a>
+    </div>
+    </body></html>
+    """, error=error)
+
 @app.route('/panel', methods=['GET', 'POST'])
 def panel():
     if 'user' not in session: return redirect(url_for('login'))
@@ -78,9 +110,8 @@ def panel():
     gen_res = ""
     if request.method == 'POST' and 'bin' in request.form:
         bin_v = request.form.get('bin', '').split('|')[0][:6]
-        cards = [f"{bin_v}{''.join([str(random.randint(0,9)) for _ in range(16-len(bin_v))])}|{random.randint(1,12):02d}|{random.randint(26,30)}|{''.join([str(random.randint(0,9)) for _ in range(3)])}" for _ in range(int(request.form.get('cant', 10)))]
-        # ARREGLO PARA SALTO DE LINEA REAL
-        gen_res = "\\n".join(cards)
+        cards_list = [f"{bin_v}{''.join([str(random.randint(0,9)) for _ in range(16-len(bin_v))])}|{random.randint(1,12):02d}|{random.randint(26,30)}|{''.join([str(random.randint(0,9)) for _ in range(3)])}" for _ in range(int(request.form.get('cant', 10)))]
+        gen_res = "\\n".join(cards_list)
 
     return render_template_string(f"""
     <html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head>
@@ -88,7 +119,7 @@ def panel():
     <audio id="live_sound" src="https://www.soundjay.com/misc/sounds/cash-register-purchase-1.mp3"></audio>
     <div class="container">
         <div style="display:flex; justify-content:space-between; align-items:center; margin: 30px 0;">
-            <div style="font-size:11px;">ID: <b style="color:var(--gold)">{session['user'].upper()}</b></div>
+            <div style="font-size:11px;">ID: <b style="color:var(--gold)">{session['user'].upper()}</b> | TG: <b style="color:#888">{u_data.get('telegram', 'N/A')}</b></div>
             <div id="display_saldo" style="background:rgba(197,160,89,0.1); border:1px solid var(--gold); padding:8px 15px; border-radius:2px; color:var(--gold); font-weight:bold;">${u_data['saldo']:.2f}</div>
         </div>
         
@@ -96,16 +127,16 @@ def panel():
             <span class="card-h">🪄 GENERADOR ELITE</span>
             <form method="POST">
                 <input name="bin" placeholder="BIN (458012)" value="{request.form.get('bin', '')}">
-                <input name="cant" type="number" value="10" style="width:70px;">
-                <button type="submit" class="btn btn-dark">🪄 GENERAR</button>
-                <textarea id="gen_area" rows="6" readonly style="margin-top:10px; color:var(--gold);">{gen_res}</textarea>
-                <button type="button" class="btn btn-dark" style="color:var(--gold)" onclick="document.getElementById('check_list').value += document.getElementById('gen_area').value + '\\n'">➕ CARGAR AL VALIDADOR</button>
+                <input name="cant" type="number" value="10" style="width:75px;">
+                <button type="submit" class="btn btn-dark">🪄 GENERAR TARJETAS</button>
+                <textarea id="gen_area" rows="6" readonly style="margin-top:10px; color:var(--gold); font-size:12px; line-height:1.5;">{gen_res}</textarea>
+                <button type="button" class="btn btn-dark" style="color:var(--gold); border: 1px solid var(--gold);" onclick="document.getElementById('check_list').value += document.getElementById('gen_area').value + '\\n'">➕ CARGAR AL VALIDADOR</button>
             </form>
         </div>
 
         <div class="card">
             <span class="card-h">🛡️ GATE AMAZON V21</span>
-            <input id="amazon_cookie" placeholder="AMAZON COOKIE...">
+            <input id="amazon_cookie" placeholder="AMAZON SESSION COOKIE...">
             <textarea id="check_list" rows="6" placeholder="LISTA CC|MM|YY|CVV"></textarea>
             <button class="btn btn-gold" id="btn_start" onclick="startChecking()">🚀 INICIAR CHECK ($0.35/LIVE)</button>
             <div style="display:flex; gap:10px; margin-top:10px;">
@@ -120,8 +151,8 @@ def panel():
         <span style="color:var(--red); font-size:10px; font-weight:bold;">DEAD ❌</span>
         <div class="res-box" style="border-left:3px solid var(--red); opacity:0.6;"><div id="dead_log"></div></div>
         
-        { f'<a href="/admin" class="btn btn-dark" style="color:var(--gold); text-decoration:none; display:block; text-align:center; margin-top:20px;">⚙️ ADMIN PANEL</a>' if u_data['rango'] == 'OWNER' else '' }
-        <a href="/logout" style="color:#444; text-decoration:none; display:block; text-align:center; margin-top:20px; font-size:10px;">CERRAR SESIÓN</a>
+        { f'<a href="/admin" class="btn btn-dark" style="color:var(--gold); text-decoration:none; display:block; text-align:center; margin-top:20px; border:1px solid var(--gold);">⚙️ ADMIN PANEL</a>' if u_data['rango'] == 'OWNER' else '' }
+        <a href="/logout" style="color:#444; text-decoration:none; display:block; text-align:center; margin-top:20px; font-size:10px;">CERRAR SESIÓN SEGURO</a>
     </div>
 
     <script>
@@ -136,6 +167,7 @@ def panel():
             let res = await fetch('/validar_card', {{ method: 'POST', headers: {{'Content-Type': 'application/json'}}, body: JSON.stringify({{card: currentCC, cookie: document.getElementById('amazon_cookie').value}}) }});
             let data = await res.json();
             if (data.status === 'LIVE') {{
+                document.getElementById('live_sound').currentTime = 0;
                 document.getElementById('live_sound').play();
                 document.getElementById('display_saldo').innerText = '$' + data.nuevo_saldo.toFixed(2);
                 document.getElementById('lives_log').innerHTML = '<span style="color:var(--green)">[LIVE]</span> ' + currentCC + ' | ' + data.info + '<br>' + document.getElementById('lives_log').innerHTML;
@@ -150,7 +182,7 @@ def panel():
     function downloadLives() {{
         const blob = new Blob([livesArray.join('\\n')], {{ type: 'text/plain' }});
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = 'lives.txt'; a.click();
+        const a = document.createElement('a'); a.href = url; a.download = 'lives_quick_money.txt'; a.click();
     }}
     </script></body></html>
     """)
@@ -169,16 +201,22 @@ def validar():
     data = request.json
     cc = data.get('card', '')
     if not user or db["usuarios"][user]['saldo'] < COSTO_LIVE: return jsonify({"error": "Saldo"}), 400
-    
-    # Lógica de Validación
     is_live = random.random() > 0.8
     if is_live:
         db["usuarios"][user]['saldo'] = round(db["usuarios"][user]['saldo'] - COSTO_LIVE, 2)
         save_db(db)
-        # DETECTAR INFO DE BANCO
         info = get_bin_info(cc)
         return jsonify({"status": "LIVE", "nuevo_saldo": db["usuarios"][user]['saldo'], "info": info})
     return jsonify({"status": "DEAD"})
+
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
+    if 'user' not in session or load_db()["usuarios"][session['user']]['rango'] != 'OWNER': return "DENEGADO"
+    db = load_db()
+    if request.method == 'POST':
+        db["usuarios"][request.form.get('u_target')]['saldo'] += float(request.form.get('amount'))
+        save_db(db)
+    return render_template_string(f'<html><head>{CSS}</head><body style="padding:50px;"><div class="card"><h2>RECARGAR CLIENTE</h2><form method="POST"><select name="u_target" style="width:100%; padding:15px; background:#000; color:#fff; border:1px solid #333;">{" ".join([f"<option value='{u}'>{u} (${{db['usuarios'][u]['saldo']}}) - TG: {{db['usuarios'][u].get('telegram', 'N/A')}}</option>" for u in db["usuarios"]])}</select><br><br><input type="number" step="0.1" name="amount" placeholder="CANTIDAD" required><button class="btn btn-gold">APLICAR RECARGA</button></form><br><a href="/panel" style="color:var(--gold); text-decoration:none;">← VOLVER AL PANEL</a></div></body></html>')
 
 @app.route('/logout')
 def logout(): session.clear(); return redirect(url_for('login'))
