@@ -1,22 +1,23 @@
 import os, random, time, json, requests
 from flask import Flask, render_template_string, request, redirect, session, url_for, jsonify
-from pymongo import MongoClient
+try:
+    from pymongo import MongoClient
+except ImportError:
+    pass # Render lo instalará con el requirements.txt
 
 app = Flask(__name__)
-app.secret_key = 'mairo_v14_proxy_elite_2026'
+app.secret_key = 'mairo_v14_fixed_2026'
 
 # --- CONFIGURACIÓN DE PROXIES (DECODO) ---
-PROXY_USER = "sp6jzqtaou"
-PROXY_PASS = "rUd7t65FxkK+x3F1hr"
-PROXY_URL = f"http://{PROXY_USER}:{PROXY_PASS}@gate.decodo.com:10001" 
-PROXIES_DICT = {"http": PROXY_URL, "https": PROXY_URL}
+PROXY_URL = "http://sp6jzqtaou:rUd7t65FxkK+x3F1hr@gate.decodo.com:10001" 
 
 # --- CONEXIÓN A MONGODB ATLAS ---
-MONGO_URI = "mongodb+srv://mairo:Mairo1212@cluster0.inuth4k.mongodb.net/?appName=Cluster0"
+MONGO_URI = "mongodb+srv://mairo:Mairo1212@cluster0.inuth4k.mongodb.net/?retryWrites=true&w=majority"
 client = MongoClient(MONGO_URI)
 db = client['QuickMoneyDB']
 users_col = db['usuarios']
 
+# Asegurar que Mairo siempre existe
 if not users_col.find_one({"u": "mairo"}):
     users_col.insert_one({"u": "mairo", "p": "1234", "saldo": 999999.0, "rango": "OWNER"})
 
@@ -62,15 +63,13 @@ def panel():
     if 'user' not in session: return redirect(url_for('login'))
     u_data = users_col.find_one({"u": session['user']})
     gen_res = ""
-    
     if request.method == 'POST' and 'bin' in request.form:
         raw_bin = request.form.get('bin', '').strip()
         parts = raw_bin.split('|')
         bin_val = parts[0][:6]
         m_f = parts[1] if len(parts) > 1 else None
         a_f = parts[2] if len(parts) > 2 else None
-        cant = int(request.form.get('cant', 10))
-        cards = [f"{bin_val}{''.join([str(random.randint(0,9)) for _ in range(16-len(bin_val))])}|{m_f if m_f else f'{random.randint(1,12):02d}'}|{a_f if a_f else str(random.randint(26,30))}|{''.join([str(random.randint(0,9)) for _ in range(3)])}" for _ in range(cant)]
+        cards = [f"{bin_val}{''.join([str(random.randint(0,9)) for _ in range(16-len(bin_val))])}|{m_f if m_f else f'{random.randint(1,12):02d}'}|{a_f if a_f else str(random.randint(26,30))}|{''.join([str(random.randint(0,9)) for _ in range(3)])}" for _ in range(int(request.form.get('cant', 10)))]
         gen_res = "\n".join(cards)
 
     return render_template_string(f"""
@@ -126,12 +125,8 @@ def validar():
     if not u_data or u_data['saldo'] < COSTO_LIVE:
         return jsonify({"error": "Saldo insuficiente"}), 400
     
-    # --- AQUÍ ENTRA EL PROXY DE DECODO ---
-    card_data = request.json.get('card')
-    # SIMULACIÓN DE CONEXIÓN REAL USANDO PROXY
-    # En una API real, aquí iría el requests.post(url, proxies=PROXIES_DICT)
-    is_live = random.random() > 0.8 # Simulación hasta conectar el Endpoint final de Amazon
-    
+    # Simulación por ahora hasta tener el endpoint final
+    is_live = random.random() > 0.8
     if is_live:
         new_saldo = round(u_data['saldo'] - COSTO_LIVE, 2)
         users_col.update_one({"u": user}, {"$set": {"saldo": new_saldo}})
@@ -144,8 +139,7 @@ def admin():
     u_admin = users_col.find_one({"u": session['user']})
     if u_admin['rango'] != 'OWNER': return "DENEGADO"
     if request.method == 'POST':
-        target = request.form.get('u_target')
-        amount = float(request.form.get('amount', 0))
+        target = request.form.get('u_target'); amount = float(request.form.get('amount', 0))
         users_col.update_one({"u": target}, {"$inc": {"saldo": amount}})
     all_users = users_col.find()
     return render_template_string(f'<html><head>{CSS}</head><body><div class="container" style="margin-top:50px;"><div class="card"><h2>⚙️ RECARGAR</h2><form method="POST"><select name="u_target">{" ".join([f"<option value='{u['u']}'>{u['u']} (${u['saldo']})</option>" for u in all_users])}</select><input type="number" step="0.01" name="amount" required><button class="btn btn-verify">CARGAR</button></form><br><a href="/panel" style="color:var(--gold)">Volver</a></div></div></body></html>')
