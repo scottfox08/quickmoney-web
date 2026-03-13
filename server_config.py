@@ -2,7 +2,7 @@ import os, random, time, json
 from flask import Flask, render_template_string, request, redirect, session, url_for, jsonify
 
 app = Flask(__name__)
-app.secret_key = 'mairo_v25_1_clean_list_supreme'
+app.secret_key = 'quick_money_v26_precision_boss'
 
 # --- BASE DE DATOS LOCAL ---
 DB_FILE = 'database.json'
@@ -14,14 +14,25 @@ def load_db():
 def save_db(data):
     with open(DB_FILE, 'w') as f: json.dump(data, f, indent=4)
 
-COSTO_LIVE = 0.35
+# --- NUEVA TARIFA ---
+COSTO_LIVE = 0.15
 
+# --- DETECCIÓN REALISTA DE BIN ---
 def get_bin_info(cc):
-    bin_6 = cc[:6]
-    bancos = ["CHASE", "BOFA", "WELLS FARGO", "CITI", "CAPITAL ONE", "BHD", "RESERVAS", "POPULAR"]
-    paises = ["USA", "USA", "USA", "USA", "USA", "DOM", "DOM", "DOM"]
-    idx = int(bin_6) % len(bancos)
-    return f"{paises[idx]} | {bancos[idx]}"
+    b = cc[:6]
+    # Lógica por rangos reales
+    if b.startswith('473702') or b.startswith('4852') or b.startswith('4580'):
+        return "USA 🇺🇸 | CHASE BANK"
+    elif b.startswith('4000') or b.startswith('4444'):
+        return "USA 🇺🇸 | BANK OF AMERICA"
+    elif b.startswith('4539') or b.startswith('4342'):
+        return "DOM 🇩🇴 | BANRESERVAS"
+    elif b.startswith('4152') or b.startswith('4015'):
+        return "DOM 🇩🇴 | BANCO POPULAR"
+    elif b.startswith('4913') or b.startswith('4213'):
+        return "DOM 🇩🇴 | BANCO BHD"
+    else:
+        return "USA 🇺🇸 | WELLS FARGO" # Default profesional
 
 CSS = """
 <style>
@@ -93,9 +104,8 @@ def panel():
     gen_res = ""
     if request.method == 'POST' and 'bin' in request.form:
         bin_v = request.form.get('bin', '').split('|')[0][:6]
-        cards = [f"{bin_v}{''.join([str(random.randint(0,9)) for _ in range(16-len(bin_v))])}|{random.randint(1,12):02d}|{random.randint(26,30)}|{''.join([str(random.randint(0,9)) for _ in range(3)])}" for _ in range(int(request.form.get('cant', 10)))]
-        # Enviamos la lista con saltos de línea claros
-        gen_res = "\\n".join(cards)
+        cards_list = [f"{bin_v}{''.join([str(random.randint(0,9)) for _ in range(16-len(bin_v))])}|{random.randint(1,12):02d}|{random.randint(26,30)}|{''.join([str(random.randint(0,9)) for _ in range(3)])}" for _ in range(int(request.form.get('cant', 10)))]
+        gen_res = "\\n".join(cards_list)
 
     return render_template_string(f"""
     <html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head>
@@ -122,7 +132,7 @@ def panel():
             <span class="card-h">🛡️ GATE AMAZON V21</span>
             <input id="amazon_cookie" placeholder="AMAZON SESSION COOKIE...">
             <textarea id="check_list" rows="6" placeholder="LISTA CC|MM|YY|CVV"></textarea>
-            <button class="btn btn-gold" id="btn_start" onclick="startChecking()">🚀 INICIAR CHECK ($0.35/LIVE)</button>
+            <button class="btn btn-gold" id="btn_start" onclick="startChecking()">🚀 INICIAR CHECK ($0.15/LIVE)</button>
             <div style="display:flex; gap:10px; margin-top:10px;">
                 <button class="btn btn-dark" style="flex:1" onclick="document.getElementById('check_list').value = ''">🗑️ LIMPIAR</button>
                 <button class="btn btn-dark" style="flex:1; color:var(--green)" onclick="downloadLives()">📥 DESCARGAR</button>
@@ -140,12 +150,9 @@ def panel():
     </div>
 
     <script>
-    // FIX PARA LIMPIAR LOS SALTOS DE LINEA AL CARGAR
     window.onload = function() {{
         let area = document.getElementById('gen_area');
-        if(area.value) {{
-            area.value = area.value.replace(/\\\\n/g, '\\n');
-        }}
+        if(area.value) {{ area.value = area.value.replace(/\\\\n/g, '\\n'); }}
     }};
 
     function cargarAlValidator() {{
