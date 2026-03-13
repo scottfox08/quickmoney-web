@@ -2,13 +2,12 @@ import os, random, time
 from flask import Flask, render_template_string, request, redirect, session, url_for, jsonify
 
 app = Flask(__name__)
-app.secret_key = 'mairo_emperor_2026_final'
+app.secret_key = 'mairo_v10_smart_gen_2026'
 
-# --- BASE DE DATOS PROVISIONAL ---
+# --- CONFIGURACIÓN DE NEGOCIO ---
 DB = {
     "usuarios": {
         "mairo": {"pass": "1234", "saldo": 999999.0, "rango": "OWNER"},
-        "cliente1": {"pass": "pago10", "saldo": 10.0, "rango": "VIP"}
     }
 }
 COSTO_LIVE = 0.35
@@ -56,9 +55,22 @@ def panel():
     if 'user' not in session: return redirect(url_for('login'))
     u_data = DB["usuarios"][session['user']]
     gen_res = ""
+    
     if request.method == 'POST' and 'bin' in request.form:
-        bin_val = request.form.get('bin')[:6]
-        cards = [f"{bin_val}{''.join([str(random.randint(0,9)) for _ in range(10)])}|{random.randint(1,12):02d}|{random.randint(26,30)}|{random.randint(100,999)}" for _ in range(int(request.form.get('cant', 10)))]
+        raw_bin = request.form.get('bin', '').strip()
+        parts = raw_bin.split('|')
+        bin_val = parts[0][:6]
+        mes_fix = parts[1] if len(parts) > 1 else None
+        anio_fix = parts[2] if len(parts) > 2 else None
+        cant = int(request.form.get('cant', 10))
+        
+        cards = []
+        for _ in range(cant):
+            cc = bin_val + "".join([str(random.randint(0,9)) for _ in range(16-len(bin_val))])
+            m = mes_fix if mes_fix else f"{random.randint(1,12):02d}"
+            a = anio_fix if anio_fix else str(random.randint(26,30))
+            cvv = "".join([str(random.randint(0,9)) for _ in range(3)])
+            cards.append(f"{cc}|{m}|{a}|{cvv}")
         gen_res = "\n".join(cards)
 
     return render_template_string(f"""
@@ -69,9 +81,9 @@ def panel():
             <div id="display_saldo" class="badge-saldo">SALDO: ${u_data['saldo']:.2f}</div>
         </div>
         <div class="card">
-            <span class="card-h">🪄 GENERADOR ELITE</span>
+            <span class="card-h">🪄 GENERADOR INTELIGENTE</span>
             <form method="POST">
-                <input name="bin" placeholder="BIN 473702" value="{request.form.get('bin', '')}">
+                <input name="bin" placeholder="BIN o BIN|MM|YYYY" value="{request.form.get('bin', '')}">
                 <input name="cant" type="number" value="10">
                 <button type="submit" class="btn" style="background:#232730; color:#fff;">🪄 GENERAR</button>
                 <textarea id="gen_area" rows="4" readonly style="color:var(--gold);">{gen_res}</textarea>
@@ -99,7 +111,7 @@ def panel():
         if (livesArray.length === 0) return alert('No hay lives');
         const blob = new Blob([livesArray.join('\\n')], {{ type: 'text/plain' }});
         const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = 'lives.txt'; a.click();
+        const a = document.createElement('a'); a.href = url; a.download = 'lives_mairo.txt'; a.click();
     }}
     async function startChecking() {{
         let area = document.getElementById('check_list');
