@@ -3,7 +3,7 @@ from flask import Flask, render_template_string, request, redirect, session, url
 from pymongo import MongoClient
 
 app = Flask(__name__)
-app.secret_key = 'quick_money_v49_nitro_master'
+app.secret_key = 'quick_money_v49_true_nitro'
 
 # --- [ CONFIGURACIÓN MAESTRA ] ---
 MONGO_URI = "mongodb+srv://mairo:mairo1212@cluster0.inuth4k.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
@@ -37,14 +37,18 @@ def check_gate_nitro(cc, sk_key):
         return {"status": "DEAD", "msg": "FAILED_AUTH"}
     except: return {"status": "DEAD", "msg": "GATE_ERROR"}
 
-# --- [ DISEÑO MEJORADO V49 NITRO ] ---
+# --- [ DISEÑO MEJORADO V49 NITRO CON FONDO ANIMADO ] ---
 CSS = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
-    :root { --gold: #c5a059; --bg: #0b0b0d; --card: rgba(15, 15, 18, 0.95); --border: #1e1e24; --green: #2ecc71; --red: #ff4757; }
-    body { background: var(--bg); color: #fff; font-family: 'JetBrains Mono', monospace; margin: 0; padding: 0; min-height: 100vh; }
+    :root { --gold: #c5a059; --bg: #000; --card: rgba(10, 10, 12, 0.9); --border: #1a1a1e; --green: #2ecc71; --red: #ff4757; }
+    body { background: var(--bg); color: #fff; font-family: 'JetBrains Mono', monospace; margin: 0; padding: 0; min-height: 100vh; overflow-x: hidden; }
+    
+    /* Fondo Animado */
+    #bg-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; opacity: 0.3; }
+
     .container { max-width: 600px; margin: auto; padding: 20px; position: relative; z-index: 10; }
-    .card { background: var(--card); border: 1px solid var(--border); padding: 20px; margin-bottom: 20px; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .card { background: var(--card); border: 1px solid var(--border); padding: 20px; margin-bottom: 20px; border-radius: 4px; backdrop-filter: blur(10px); }
     .card-h { font-size: 10px; color: var(--gold); text-transform: uppercase; font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 15px; display: block; letter-spacing: 2px; }
     input, textarea { width: 100%; background: #050505; border: 1px solid var(--border); color: #fff; padding: 12px; margin-bottom: 10px; box-sizing: border-box; font-family: inherit; font-size: 13px; outline: none; border-radius: 2px; }
     .btn { border: none; padding: 15px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 11px; width: 100%; transition: 0.2s; font-family: inherit; border-radius: 2px; }
@@ -59,10 +63,61 @@ CSS = """
 </style>
 """
 
+JS_BG = """
+<script>
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    let particles = [];
+    class Particle {
+        constructor() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.size = Math.random() * 1.5;
+            this.speedX = Math.random() * 0.5 - 0.25;
+            this.speedY = Math.random() * 0.5 - 0.25;
+            this.color = Math.random() > 0.1 ? '#c5a059' : '#fff';
+        }
+        update() {
+            this.x += this.speedX;
+            this.y += this.speedY;
+            if (this.size > 0.2) this.size -= 0.001;
+            if (this.x > canvas.width || this.x < 0) this.speedX *= -1;
+            if (this.y > canvas.height || this.y < 0) this.speedY *= -1;
+        }
+        draw() {
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    function init() { for (let i = 0; i < 80; i++) { particles.push(new Particle()); } }
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < particles.length; i++) {
+            particles[i].update();
+            particles[i].draw();
+        }
+        if(Math.random() > 0.98) { // Rayo ocasional
+            ctx.fillStyle = 'rgba(197, 160, 89, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        requestAnimationFrame(animate);
+    }
+    init(); animate();
+    window.addEventListener('resize', function(){
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    });
+</script>
+"""
+
 @app.route('/')
 def login():
     if 'user' in session: return redirect(url_for('panel'))
-    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:320px; text-align:center;"><h2>⚡️🌩️Quick Money🌩️⚡️</h2><span style="color:var(--gold); font-size:10px;">{{CHK}}</span><br><br><form method="POST" action="/auth"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><button class="btn btn-gold">INGRESAR</button></form><br><a href="/register" style="color:var(--gold); font-size:10px; text-decoration:none;">¿No tiene cuenta? Regístrese</a></div></body></html>')
+    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body><canvas id="bg-canvas"></canvas><div style="display:flex;align-items:center;justify-content:center;height:100vh;position:relative;z-index:10;"><div class="card" style="width:320px; text-align:center;"><h2>⚡️🌩️Quick Money🌩️⚡️</h2><span style="color:var(--gold); font-size:10px;">{{CHK}}</span><br><br><form method="POST" action="/auth"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><button class="btn btn-gold">INGRESAR</button></form><br><a href="/register" style="color:var(--gold); font-size:10px; text-decoration:none;">¿No tiene cuenta? Regístrese</a></div></div>{JS_BG}</body></html>')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -71,23 +126,20 @@ def register():
         if not usuarios_col.find_one({"u": u}):
             usuarios_col.insert_one({"u": u, "p": p, "saldo": 0.0, "rango": "USER", "telegram": t})
             return redirect(url_for('login'))
-    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body><div class="container"><div class="card" style="text-align:center;"><h2>REGISTRO</h2><form method="POST"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><input name="t" placeholder="TELEGRAM @ID"><button class="btn btn-gold">REGISTRARSE</button></form></div></div></body></html>')
+    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body><canvas id="bg-canvas"></canvas><div class="container"><div class="card" style="text-align:center;"><h2>REGISTRO</h2><form method="POST"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><input name="t" placeholder="TELEGRAM @ID"><button class="btn btn-gold">REGISTRARSE</button></form></div></div>{JS_BG}</body></html>')
 
 @app.route('/panel')
 def panel():
     if 'user' not in session: return redirect(url_for('login'))
     u_data = usuarios_col.find_one({"u": session['user']})
     is_admin = session['user'].lower() == "mairo"
-    
     current_sk = config_col.find_one({"key": "sk_live"})
     sk_val = current_sk['val'] if current_sk else ""
-
-    # LISTA DE USUARIOS PARA EL ADMIN
     all_users = list(usuarios_col.find()) if is_admin else []
 
     return render_template_string(f"""
     <html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head>
-    <body><div class="container">
+    <body><canvas id="bg-canvas"></canvas><div class="container">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
             <div style="font-size:11px;">ID: <b style="color:var(--gold)">{session['user'].upper()}</b></div>
             <div style="border:1px solid var(--gold); padding:8px 12px; color:var(--gold); font-size:11px;">BALANCE: <b id="display_saldo">${u_data['saldo']:.2f}</b></div>
@@ -134,6 +186,7 @@ def panel():
             <a href="/logout" style="color:#666">SALIR</a>
         </div>
     </div>
+    {JS_BG}
     <script>
     function generar() {{
         let bin = document.getElementById('bin_val').value;
