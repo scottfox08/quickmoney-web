@@ -3,9 +3,9 @@ from flask import Flask, render_template_string, request, redirect, session, url
 from pymongo import MongoClient
 
 app = Flask(__name__)
-app.secret_key = 'quick_money_v49_authority_nitro'
+app.secret_key = 'quick_money_v49_perfect_nitro'
 
-# --- [ CONFIGURACIÓN MAESTRA ] ---
+# --- [ CONFIGURACIÓN MAESTRA INTACTA ] ---
 MONGO_URI = "mongodb+srv://mairo:mairo1212@cluster0.inuth4k.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
 try:
@@ -38,7 +38,7 @@ def check_gate_nitro(cc, sk_key):
         return {"status": "DEAD", "msg": "FAILED_AUTH"}
     except: return {"status": "DEAD", "msg": "GATE_ERROR"}
 
-# --- [ DISEÑO AUTHORITY ] ---
+# --- [ DISEÑO PERFECTO ] ---
 CSS = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
@@ -46,25 +46,20 @@ CSS = """
     body { background: var(--bg); color: #fff; font-family: 'JetBrains Mono', monospace; margin: 0; padding: 0; min-height: 100vh; overflow-x: hidden; }
     #bg-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; opacity: 0.4; }
     .container { max-width: 1150px; margin: auto; padding: 15px; position: relative; z-index: 10; }
-    
     .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch; }
     @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
-
-    .card { background: var(--card); border: 1px solid var(--border); padding: 20px; margin-bottom: 20px; border-radius: 4px; backdrop-filter: blur(10px); display: flex; flex-direction: column; justify-content: space-between; }
+    .card { background: var(--card); border: 1px solid var(--border); padding: 20px; margin-bottom: 20px; border-radius: 4px; backdrop-filter: blur(10px); }
     .card-h { font-size: 10px; color: var(--gold); text-transform: uppercase; font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 15px; display: block; letter-spacing: 2px; }
-    
     input, textarea { width: 100%; background: #050505; border: 1px solid var(--border); color: #fff; padding: 12px; margin-bottom: 10px; box-sizing: border-box; font-family: inherit; font-size: 13px; outline: none; border-radius: 2px; }
     .btn { border: none; padding: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 10px; transition: 0.2s; font-family: inherit; border-radius: 2px; }
     .btn-gold { background: var(--gold); color: #000; width: 100%; }
     .btn-dark { background: #0a0a0a; color: #fff; border: 1px solid #1a1a1e; }
     .btn-mini { padding: 8px 12px; font-size: 9px; }
-    
     .res-box { border-radius: 2px; padding: 10px; font-size: 11px; min-height: 120px; border: 1px solid #1e1e24; background: #030303; overflow-y: auto; max-height: 250px; }
     table { width: 100%; font-size: 10px; border-collapse: collapse; }
     th { text-align: left; color: var(--gold); border-bottom: 1px solid var(--border); padding: 8px 5px; }
     td { padding: 8px 5px; border-bottom: 1px solid #111; }
     .flex-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
-    #history-content { display: none; margin-top: 15px; }
 </style>
 """
 
@@ -74,7 +69,7 @@ JS_SCRIPT = """
     canvas.width = window.innerWidth; canvas.height = window.innerHeight;
     let particles = [];
     class Particle {
-        constructor() { this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height; this.size = Math.random() * 1.5; this.speedX = Math.random() * 0.5 - 0.25; this.speedY = Math.random() * 0.5 - 0.25; this.color = '#c5a059'; }
+        constructor() { this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height; this.size = Math.random() * 1.5; this.speedX = Math.random() * 0.4 - 0.2; this.speedY = Math.random() * 0.4 - 0.2; this.color = '#c5a059'; }
         update() { this.x += this.speedX; this.y += this.speedY; if (this.x > canvas.width || this.x < 0) this.speedX *= -1; if (this.y > canvas.height || this.y < 0) this.speedY *= -1; }
         draw() { ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
     }
@@ -86,7 +81,6 @@ JS_SCRIPT = """
         let content = document.getElementById('history-content');
         content.style.display = (content.style.display === 'block') ? 'none' : 'block';
     }
-
     function generar() {
         let bin = document.getElementById('bin_val').value; if(bin.length < 6) return;
         let out = ""; for(let i=0; i<10; i++) {
@@ -97,9 +91,6 @@ JS_SCRIPT = """
         }
         document.getElementById('check_list').value = out;
     }
-    function limpiarGeneradas() { document.getElementById('check_list').value = ""; }
-    function limpiarDead() { document.getElementById('dead_log').innerHTML = ""; }
-    
     async function startChecking() {
         let a = document.getElementById('check_list'); let lines = a.value.trim().split('\\n');
         if(!lines[0]) return; document.getElementById('btn_start').disabled = true;
@@ -122,15 +113,11 @@ JS_SCRIPT = """
 def panel():
     if 'user' not in session: return redirect(url_for('login'))
     u_data = usuarios_col.find_one({"u": session['user']})
-    
-    # --- [ FIX ID AUTHORITY ] ---
     display_name = "ADMIN" if session['user'].lower() == "mairo" else session['user'].upper()
     is_admin = session['user'].lower() == "mairo"
-    
     current_sk = config_col.find_one({"key": "sk_live"})
     sk_val = current_sk['val'] if current_sk else ""
     all_users = list(usuarios_col.find()) if is_admin else []
-    
     query = {} if is_admin else {"usuario": session['user']}
     historial = list(historial_col.find(query).sort("_id", -1).limit(40))
 
@@ -145,7 +132,7 @@ def panel():
 
         <div class="main-grid">
             <div>
-                {f'''<div class="card" style="border:1px solid var(--gold); height:auto;"><span class="card-h">👑 ADMIN NITRO CONTROL</span>
+                {f'''<div class="card" style="border:1px solid var(--gold);"><span class="card-h">👑 ADMIN NITRO CONTROL</span>
                     <form action="/update_sk" method="POST" class="flex-row">
                         <input name="new_sk" placeholder="SK_LIVE_..." value="{sk_val}" style="margin-bottom:0; flex:1;">
                         <button class="btn btn-gold btn-mini">ACTUALIZAR</button>
@@ -166,56 +153,43 @@ def panel():
                     <div style="margin-bottom:20px;">
                         <div style="font-size:11px; margin-bottom:5px;">Status: <b style="color:var(--green)">Premium Account</b></div>
                         <div style="font-size:11px; margin-bottom:15px;">Telegram: <b style="color:var(--gold)">{u_data.get('telegram','-')}</b></div>
-                        <p style="font-size:11px; opacity:0.7; line-height:1.6;">Bienvenido a Quick Money. Su historial de aciertos se almacena de forma segura en nuestra base de datos para su consulta posterior.</p>
                     </div>
                     <button class="btn btn-gold btn-mini" style="width:100%; margin-bottom:10px;" onclick="toggleHistory()">📂 ABRIR HISTORY LIVES</button>
-                    <div id="history-content" style="flex-grow:1;">
-                        <div style="max-height: 300px; overflow-y: auto; border: 1px solid #1a1a1e; padding: 5px; background: #050505;">
+                    <div id="history-content" style="display:none;">
+                        <div style="max-height: 250px; overflow-y: auto; border: 1px solid #1a1a1e; background: #050505;">
                             <table><tr><th>CARD</th><th>FECHA</th></tr>
                             {''.join([f"<tr><td>{h['cc']}</td><td>{h['fecha']}</td></tr>" for h in historial])}
                             </table>
                         </div>
                     </div>
-                    <a href="https://t.me/quickmoney_support24" target="_blank" class="btn btn-dark btn-mini" style="width:100%; text-align:center; text-decoration:none; margin-top:15px;">SOLICITAR RECARGA</a>
                 </div>
                 '''}
             </div>
 
             <div class="card"><span class="card-h">🪄 GENERADOR / CHECKER</span>
-                <div class="flex-row">
-                    <input id="bin_val" placeholder="BIN (473702)" value="473702" style="margin-bottom:0; flex:1;">
-                    <button class="btn btn-dark btn-mini" onclick="generar()">GENERAR</button>
-                    <button class="btn btn-dark btn-mini" style="color:var(--red)" onclick="limpiarGeneradas()">BORRAR</button>
-                </div>
+                <div class="flex-row"><input id="bin_val" value="473702" style="margin-bottom:0; flex:1;"><button class="btn btn-dark btn-mini" onclick="generar()">GENERAR</button></div>
                 <textarea id="check_list" rows="10" placeholder="CC|MM|YY|CVV"></textarea>
                 <button class="btn btn-gold" id="btn_start" onclick="startChecking()">🚀 INICIAR PROCESO ($0.15)</button>
             </div>
         </div>
 
-        {f'''<div class="card" style="margin-top:0px;"><span class="card-h">📂 GLOBAL DATABASE HISTORY (ADMIN VIEW)</span>
-            <button class="btn btn-gold btn-mini" style="width:auto;" onclick="toggleHistory()">TOGGLE DATABASE VIEW</button>
-            <div id="history-content">
-                <div style="max-height: 300px; overflow-y: auto;">
-                <table><tr><th>USER</th><th>CARD</th><th>FECHA</th></tr>
-                {''.join([f"<tr><td>{h['usuario']}</td><td>{h['cc']}</td><td>{h['fecha']}</td></tr>" for h in historial])}
+        {f'''<div class="card" style="max-width: 450px; margin-top:0px;"><span class="card-h">📂 GLOBAL DATABASE (ADMIN)</span>
+            <button class="btn btn-gold btn-mini" onclick="toggleHistory()">TOGGLE VIEW</button>
+            <div id="history-content" style="display:none;">
+                <div style="max-height: 250px; overflow-y: auto;">
+                <table><tr><th>USER</th><th>CARD</th></tr>
+                {''.join([f"<tr><td>{h['usuario']}</td><td>{h['cc']}</td></tr>" for h in historial])}
                 </table></div>
             </div>
         </div>''' if is_admin else ""}
 
-        <div class="main-grid" style="margin-top:0;">
+        <div class="main-grid">
             <div><span style="color:var(--green); font-size:10px;">LIVES ✅</span><div class="res-box" id="lives_log"></div></div>
-            <div>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="color:var(--red); font-size:10px;">DEAD ❌</span>
-                    <button class="btn btn-dark btn-mini" onclick="limpiarDead()">BORRAR</button>
-                </div>
-                <div class="res-box" id="dead_log" style="opacity:0.6;"></div>
-            </div>
+            <div><span style="color:var(--red); font-size:10px;">DEAD ❌</span><div class="res-box" id="dead_log" style="opacity:0.6;"></div></div>
         </div>
 
-        <div style="text-align:center; margin:30px 0; font-size:10px; position:relative; z-index:20;">
-            <a href="https://t.me/quickmoney_support24" target="_blank" style="color:var(--gold); margin:0 15px; text-decoration:none;">🔵 SOPORTE</a> | 
-            <a href="https://t.me/+GUlp9rhO0_k1ZWYx" target="_blank" style="color:var(--gold); margin:0 15px; text-decoration:none;">🔵 GRUPO</a> | 
+        <div style="text-align:center; margin-top:30px; font-size:10px;">
+            <a href="https://t.me/quickmoney_support24" style="color:var(--gold); margin:0 15px; text-decoration:none;">🔵 SOPORTE</a> | 
             <a href="/logout" style="color:#666; margin:0 15px; text-decoration:none;">🚪 SALIR</a>
         </div>
     </div>
@@ -223,11 +197,19 @@ def panel():
     </body></html>
     """)
 
-# --- [ RUTAS DE REGISTRO Y AUTH SIGUEN IGUAL ] ---
 @app.route('/')
 def login():
     if 'user' in session: return redirect(url_for('panel'))
-    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body><canvas id="bg-canvas"></canvas><div style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:320px; text-align:center; position:relative; z-index:10;"><h2>⚡️🌩️Quick Money🌩️⚡️</h2><br><form method="POST" action="/auth"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><button class="btn btn-gold">INGRESAR</button></form></div></div></body></html>')
+    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body><canvas id="bg-canvas"></canvas><div style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:320px; text-align:center; position:relative; z-index:10;"><h2>⚡️🌩️Quick Money🌩️⚡️</h2><br><form method="POST" action="/auth"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><button class="btn btn-gold">INGRESAR</button></form><br><a href="/register" style="color:var(--gold); font-size:10px; text-decoration:none;">¿Aun no te a registrado? Regístrate aquí</a></div></div>{JS_SCRIPT}</body></html>')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        u, p, t = request.form.get('u'), request.form.get('p'), request.form.get('t')
+        if not usuarios_col.find_one({"u": u}):
+            usuarios_col.insert_one({"u": u, "p": p, "saldo": 0.0, "rango": "USER", "telegram": t})
+            return redirect(url_for('login'))
+    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body><canvas id="bg-canvas"></canvas><div style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:320px; text-align:center; position:relative; z-index:10;"><h2>REGISTRO</h2><form method="POST"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><input name="t" placeholder="TELEGRAM @ID"><button class="btn btn-gold">REGISTRARSE</button></form></div></div>{JS_SCRIPT}</body></html>')
 
 @app.route('/validar_card', methods=['POST'])
 def validar():
