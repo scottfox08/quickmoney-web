@@ -3,7 +3,7 @@ from flask import Flask, render_template_string, request, redirect, session, url
 from pymongo import MongoClient
 
 app = Flask(__name__)
-app.secret_key = 'quick_money_v46_admin_final'
+app.secret_key = 'quick_money_v47_professional_final'
 
 # --- [ CONFIGURACIÓN MAESTRA ] ---
 SNIPCART_SECRET = "ST_MDM2YTJlNjItNjBmYi00N2IyLWFjYWMtNDBkYjZmN2M2ODUzNjM5MDkwMzU3MzkyMjQ1NjA3"
@@ -50,7 +50,7 @@ def check_gate_pro(cc):
     except Exception:
         return {"status": "DEAD", "msg": "BANC_RETRY"}
 
-# --- [ DISEÑO ÉLITE ] ---
+# --- [ DISEÑO ÉLITE V47 ] ---
 CSS = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
@@ -69,6 +69,7 @@ CSS = """
     .res-box { border-radius: 2px; padding: 12px; font-size: 11px; min-height: 100px; border: 1px solid #1a1a1e; background: #030303; overflow-y: auto; max-height: 250px; margin-bottom: 10px; }
     .user-list { font-size: 10px; color: #888; text-align: left; max-height: 100px; overflow-y: auto; background: #050505; padding: 10px; border: 1px solid #1a1a1e; }
     a { text-decoration: none; color: var(--gold); font-size: 10px; }
+    .support-links { margin-top: 15px; display: flex; gap: 10px; justify-content: center; }
 </style>
 """
 
@@ -92,7 +93,23 @@ CANVAS_JS = """
 @app.route('/')
 def login():
     if 'user' in session: return redirect(url_for('panel'))
-    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body><canvas id="bg-canvas"></canvas><div style="display:flex;align-items:center;justify-content:center;height:100vh;position:relative;z-index:10;"><div class="card" style="width:340px; text-align:center;"><h2 style="letter-spacing:2px;">⚡️ QUICK MONEY ⚡️</h2><form method="POST" action="/auth"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><button class="btn btn-gold">INGRESAR</button></form><br><a href="/register">[ CREAR CUENTA ]</a></div></div>{CANVAS_JS}</body></html>')
+    return render_template_string(f"""
+    <html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head>
+    <body><canvas id="bg-canvas"></canvas>
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;position:relative;z-index:10;">
+        <div class="card" style="width:340px; text-align:center;">
+            <h2 style="margin:0; letter-spacing:1px;">⚡️🌩️Quick Money🌩️⚡️</h2>
+            <span style="color:var(--gold); font-size:10px; display:block; margin-bottom:20px;">{{CHK}}</span>
+            <form method="POST" action="/auth">
+                <input name="u" placeholder="USUARIO">
+                <input type="password" name="p" placeholder="PASS">
+                <button class="btn btn-gold">INGRESAR</button>
+            </form>
+            <br>
+            <a href="/register">¿No tiene cuenta? Regístrese aquí</a>
+        </div>
+    </div>{CANVAS_JS}</body></html>
+    """)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -108,8 +125,6 @@ def panel():
     if 'user' not in session: return redirect(url_for('login'))
     u_data = usuarios_col.find_one({"u": session['user']})
     is_admin = session['user'].lower() == "mairo"
-    
-    # Detalle solicitado: Mostrar ADMIN o nombre de usuario
     display_id = "ADMIN" if is_admin else session['user'].upper()
 
     all_users = ""
@@ -150,14 +165,25 @@ def panel():
             <button class="btn btn-gold" id="btn_start" onclick="startChecking()">🚀 INICIAR CHECK ($0.15)</button>
         </div>
 
-        <div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--green); font-size:10px;">LIVES ✅</span></div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:var(--green); font-size:10px;">LIVES ✅</span>
+            <button class="btn btn-dark btn-mini" onclick="descargarLives()">📥 DESCARGAR LIVES</button>
+        </div>
         <div class="res-box" id="lives_log"></div>
         
-        <div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--red); font-size:10px;">DEAD ❌</span> <button class="btn btn-danger btn-mini" onclick="document.getElementById('dead_log').innerHTML = ''">🗑️ LIMPIAR</button></div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:var(--red); font-size:10px;">DEAD ❌</span> 
+            <button class="btn btn-danger btn-mini" onclick="document.getElementById('dead_log').innerHTML = ''">🗑️ LIMPIAR</button>
+        </div>
         <div class="res-box" id="dead_log" style="opacity:0.6;"></div>
 
+        <div class="support-links">
+            <a href="https://t.me/Tu_User_Mairo" target="_blank" style="border:1px solid var(--gold); padding:8px; border-radius:4px;">👤 SOPORTE</a>
+            <a href="https://t.me/+GUlp9rhO0_k1ZWYx" target="_blank" style="border:1px solid var(--gold); padding:8px; border-radius:4px;">📢 GRUPO</a>
+        </div>
+
         <div style="text-align:center; margin-top:30px;">
-            <a href="/logout" style="border:1px solid #333; padding:10px 20px; border-radius:4px;">[ CERRAR SESIÓN ]</a>
+            <a href="/logout" style="color:#666; font-size:9px;">[ CERRAR SESIÓN ]</a>
         </div>
     </div>{CANVAS_JS}
     <script>
@@ -188,6 +214,15 @@ def panel():
             await new Promise(r => setTimeout(r, 1000));
         }}
         document.getElementById('btn_start').disabled = false;
+    }}
+    function descargarLives() {{
+        let data = document.getElementById('lives_log').innerText;
+        if(!data) return alert('No hay lives para descargar');
+        let blob = new Blob([data], {{type: 'text/plain'}});
+        let a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'lives_quickmoney.txt';
+        a.click();
     }}
     </script></body></html>
     """)
