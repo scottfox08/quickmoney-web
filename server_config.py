@@ -3,7 +3,7 @@ from flask import Flask, render_template_string, request, redirect, session, url
 from pymongo import MongoClient
 
 app = Flask(__name__)
-app.secret_key = 'quick_money_v45_final_elite'
+app.secret_key = 'quick_money_v46_admin_final'
 
 # --- [ CONFIGURACIÓN MAESTRA ] ---
 SNIPCART_SECRET = "ST_MDM2YTJlNjItNjBmYi00N2IyLWFjYWMtNDBkYjZmN2M2ODUzNjM5MDkwMzU3MzkyMjQ1NjA3"
@@ -50,7 +50,7 @@ def check_gate_pro(cc):
     except Exception:
         return {"status": "DEAD", "msg": "BANC_RETRY"}
 
-# --- [ DISEÑO ÉLITE TOTAL ] ---
+# --- [ DISEÑO ÉLITE ] ---
 CSS = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
@@ -109,16 +109,19 @@ def panel():
     u_data = usuarios_col.find_one({"u": session['user']})
     is_admin = session['user'].lower() == "mairo"
     
+    # Detalle solicitado: Mostrar ADMIN o nombre de usuario
+    display_id = "ADMIN" if is_admin else session['user'].upper()
+
     all_users = ""
     if is_admin:
         users = usuarios_col.find({}, {"u": 1, "telegram": 1, "saldo": 1})
-        all_users = "".join([f"• {u['u']} (@{u.get('telegram','?')}) - ${u['saldo']}<br>" for u in users])
+        all_users = "".join([f"• {u['u']} (@{u.get('telegram','?')}) - ${u['saldo']:.2f}<br>" for u in users])
 
     return render_template_string(f"""
     <html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head>
     <body><canvas id="bg-canvas"></canvas><div class="container">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
-            <div style="font-size:11px;">ID: <b style="color:var(--gold)">{session['user'].upper()}</b></div>
+            <div style="font-size:11px;">ID: <b style="color:var(--gold)">{display_id}</b></div>
             <div style="border:1px solid var(--gold); padding:8px 15px; color:var(--gold); font-size:11px;">
                 CREDIT/SALDO: <b id="display_saldo">${u_data['saldo']:.2f}</b>
             </div>
