@@ -3,7 +3,7 @@ from flask import Flask, render_template_string, request, redirect, session, url
 from pymongo import MongoClient
 
 app = Flask(__name__)
-app.secret_key = 'quick_money_v47_professional_final'
+app.secret_key = 'quick_money_v48_final_shield'
 
 # --- [ CONFIGURACIÓN MAESTRA ] ---
 SNIPCART_SECRET = "ST_MDM2YTJlNjItNjBmYi00N2IyLWFjYWMtNDBkYjZmN2M2ODUzNjM5MDkwMzU3MzkyMjQ1NjA3"
@@ -50,7 +50,7 @@ def check_gate_pro(cc):
     except Exception:
         return {"status": "DEAD", "msg": "BANC_RETRY"}
 
-# --- [ DISEÑO ÉLITE V47 ] ---
+# --- [ DISEÑO ÉLITE V48 ] ---
 CSS = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
@@ -178,8 +178,8 @@ def panel():
         <div class="res-box" id="dead_log" style="opacity:0.6;"></div>
 
         <div class="support-links">
-            <a href="https://t.me/Tu_User_Mairo" target="_blank" style="border:1px solid var(--gold); padding:8px; border-radius:4px;">👤 SOPORTE</a>
-            <a href="https://t.me/+GUlp9rhO0_k1ZWYx" target="_blank" style="border:1px solid var(--gold); padding:8px; border-radius:4px;">📢 GRUPO</a>
+            <a href="https://t.me/quickmoney_support24" target="_blank" style="border:1px solid var(--gold); padding:8px; border-radius:4px;">🔵 SOPORTE</a>
+            <a href="https://t.me/+GUlp9rhO0_k1ZWYx" target="_blank" style="border:1px solid var(--gold); padding:8px; border-radius:4px;">🔵 GRUPO</a>
         </div>
 
         <div style="text-align:center; margin-top:30px;">
